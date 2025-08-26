@@ -1,0 +1,47 @@
+{
+  "name": "scamnepal-backend",
+  "version": "1.0.0",
+  "description": "ScamNepal Community Scam Registry Backend API",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "nodemon --exec ts-node server.ts",
+    "build": "tsc",
+    "start": "ts-node server.ts --skipLibCheck",
+    "clean": "rm -rf node_modules package-lock.json",
+    "db:setup": "psql -U postgres -d scamnepal_csr -f database/schema.sql",
+    "db:reset": "psql -U postgres -c 'DROP DATABASE IF EXISTS scamnepal_csr; CREATE DATABASE scamnepal_csr;' && npm run db:setup"
+  },
+  "keywords": [
+    "api",
+    "backend",
+    "scam",
+    "registry",
+    "nepal"
+  ],
+  "author": "ScamNepal Team",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^24.3.0",
+    "@types/pg": "^8.10.9",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

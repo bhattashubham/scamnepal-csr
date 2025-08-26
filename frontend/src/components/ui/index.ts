@@ -1,0 +1,10 @@
+// UI Components - Single source of truth for all base components
+export { Button } from './button'
+export { Input } from './input'
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
+export { Badge } from './badge'
+export { Avatar, AvatarImage, AvatarFallback } from './avatar'
+export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './select'
+export { Switch } from './switch'
+export { Label } from './label'
+export { Separator } from './separator'

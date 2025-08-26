@@ -1,0 +1,71 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Next.js
+.next/
+out/
+
+# Production build
+/build
+
+# Environment variables
+.env*.local
+.env
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# ESLint
+.eslintcache
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Development files
+README.md
+CHANGELOG.md
+LICENSE
+.gitattributes
+
+# Testing
+test/
+tests/
+__tests__/
+*.test.*
+*.spec.*
+
+# Documentation
+docs/
