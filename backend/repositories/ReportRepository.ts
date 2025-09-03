@@ -210,13 +210,28 @@ export class ReportRepository extends BaseRepository<Report> {
 
     // Add to status history if status changed
     if (updateData.status && currentReport.status !== updateData.status) {
+      // Get user name for the note
+      let userName = 'system'
+      if (updatedBy) {
+        try {
+          const userResult = await this.query('SELECT name, email FROM users WHERE id = $1', [updatedBy])
+          if (userResult.rows.length > 0) {
+            const user = userResult.rows[0]
+            userName = user.name || user.email || 'Unknown User'
+          }
+        } catch (error) {
+          console.error('Error fetching user name:', error)
+          userName = 'Unknown User'
+        }
+      }
+      
       await this.addStatusHistory(
         id, 
         currentReport.status, 
         updateData.status, 
         updatedBy, 
         updateData.status_reason || 'Report updated',
-        `Report updated by ${updatedBy || 'system'}`
+        `Report updated by ${userName}`
       )
     }
 

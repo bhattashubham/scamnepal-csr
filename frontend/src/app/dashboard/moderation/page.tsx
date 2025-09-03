@@ -140,7 +140,7 @@ export default function ModerationPage() {
         decision: {
           decision,
           reason: reason || `Task ${decision}d`,
-          notes: `Decision made by ${user?.email}`
+          notes: `Decision made by ${user?.name || user?.email || 'Unknown User'}`
         }
       })
       setShowDecisionModal(null)

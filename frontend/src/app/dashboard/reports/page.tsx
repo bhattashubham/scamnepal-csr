@@ -101,7 +101,7 @@ export default function ReportsPage() {
       await updateStatusMutation.mutateAsync({ 
         id: reportId, 
         status: newStatus,
-        notes: `Status updated to ${newStatus}` 
+        notes: `Status updated to ${newStatus} by ${user?.name || user?.email || 'Unknown User'}` 
       })
     } catch (error) {
       console.error('Failed to update status:', error)
