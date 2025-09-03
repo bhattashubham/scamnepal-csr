@@ -133,6 +133,74 @@ export default function ModerationPage() {
     }
   }
 
+  const handleMakeDecision = async (taskId: string, decision: 'approve' | 'reject' | 'escalate' | 'require_info', reason?: string) => {
+    try {
+      await makeDecisionMutation.mutateAsync({
+        taskId,
+        decision: {
+          decision,
+          reason: reason || `Task ${decision}d`,
+          notes: `Decision made by ${user?.email}`
+        }
+      })
+      setShowDecisionModal(null)
+    } catch (error) {
+      console.error('Failed to make decision:', error)
+    }
+  }
+
+  const handleBulkDecision = async (decision: 'approve' | 'reject' | 'escalate' | 'require_info') => {
+    if (selectedTasks.length > 0) {
+      try {
+        const decisions = selectedTasks.map(taskId => ({
+          taskId,
+          decision: {
+            decision,
+            reason: `Bulk ${decision} by ${user?.email}`,
+            notes: `Bulk decision made on ${selectedTasks.length} tasks`
+          }
+        }))
+        
+        // Use the bulk decisions endpoint
+        await fetch('/api/moderation/decisions/bulk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ decisions })
+        })
+        
+        setSelectedTasks([])
+        setShowBulkActions(false)
+      } catch (error) {
+        console.error('Failed to make bulk decision:', error)
+      }
+    }
+  }
+
+  // Quick Actions handlers
+  const handleReviewHighPriority = () => {
+    setFilters({ ...filters, priority: 'high' })
+  }
+
+  const handleCheckOverdue = () => {
+    // Filter to show tasks that are overdue (older than 24 hours)
+    const overdueDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    setFilters({ ...filters, dateFrom: overdueDate })
+  }
+
+  const handleViewAnalytics = () => {
+    // Navigate to analytics page or show analytics modal
+    window.location.href = '/dashboard/analytics'
+  }
+
+  const handleBulkDecisionAction = () => {
+    // Select all tasks for bulk decision
+    setSelectedTasks(tasks.map(task => task.id))
+    setShowBulkActions(true)
+  }
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
@@ -290,6 +358,8 @@ export default function ModerationPage() {
         </Card>
       </div>
 
+
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Main Queue */}
         <div className="lg:col-span-3 space-y-6">
@@ -339,6 +409,34 @@ export default function ModerationPage() {
                   <span className="text-sm text-gray-600">
                     {tasks.length} tasks
                   </span>
+                  {(filters.priority || filters.status || filters.type) && (
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs text-blue-600">Active filters:</span>
+                      {filters.priority && (
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          Priority: {filters.priority}
+                        </span>
+                      )}
+                      {filters.status && (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                          Status: {filters.status}
+                        </span>
+                      )}
+                      {filters.type && (
+                        <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                          Type: {filters.type}
+                        </span>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setFilters({})}
+                        className="text-xs"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  )}
                   <Button variant="outline" size="sm">
                     <Filter className="h-4 w-4 mr-2" />
                     More Filters
@@ -360,8 +458,17 @@ export default function ModerationPage() {
                       <Button size="sm" variant="outline" onClick={() => handleBulkUpdateStatus('under_review')}>
                         Start Review
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleBulkUpdateStatus('escalated')}>
-                        Escalate
+                      <Button size="sm" variant="outline" onClick={() => handleBulkDecision('approve')}>
+                        Approve All
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleBulkDecision('reject')}>
+                        Reject All
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleBulkDecision('escalate')}>
+                        Escalate All
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleBulkDecision('require_info')}>
+                        Need Info All
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setSelectedTasks([])}>
                         Clear Selection
@@ -487,6 +594,52 @@ export default function ModerationPage() {
                               <span className="text-xs text-gray-500">Assigned to other</span>
                             )}
 
+                            {/* Decision Buttons */}
+                            {task.assignedTo === user?.id && (
+                              <div className="flex items-center space-x-1">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-green-600 border-green-200 hover:bg-green-50"
+                                  onClick={() => handleMakeDecision(task.id, 'approve')}
+                                  disabled={makeDecisionMutation.isPending}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  onClick={() => handleMakeDecision(task.id, 'reject')}
+                                  disabled={makeDecisionMutation.isPending}
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Reject
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                                  onClick={() => handleMakeDecision(task.id, 'escalate')}
+                                  disabled={makeDecisionMutation.isPending}
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Escalate
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => handleMakeDecision(task.id, 'require_info')}
+                                  disabled={makeDecisionMutation.isPending}
+                                >
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Need Info
+                                </Button>
+                              </div>
+                            )}
+
                             <div className="relative">
                               <Button variant="outline" size="sm">
                                 <MoreHorizontal className="h-4 w-4" />
@@ -547,22 +700,39 @@ export default function ModerationPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start" variant="outline">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={handleReviewHighPriority}
+              >
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 Review High Priority
               </Button>
               
-              <Button className="w-full justify-start" variant="outline">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={handleCheckOverdue}
+              >
                 <Clock className="h-4 w-4 mr-2" />
                 Check Overdue
               </Button>
               
-              <Button className="w-full justify-start" variant="outline">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={handleViewAnalytics}
+              >
                 <TrendingUp className="h-4 w-4 mr-2" />
                 View Analytics
               </Button>
               
-              <Button className="w-full justify-start" variant="outline">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={handleBulkDecisionAction}
+                disabled={tasks.length === 0}
+              >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Bulk Decision
               </Button>

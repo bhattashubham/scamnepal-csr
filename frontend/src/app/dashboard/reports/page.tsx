@@ -22,12 +22,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useReports, useUpdateReportStatus, useDeleteReport } from '@/hooks/useReports'
 import { formatCurrency, formatRelativeTime, formatRiskScore } from '@/lib/utils'
 import { Report } from '@/types'
+import { useAuthStore } from '@/stores/auth'
 
 export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | Report['status']>('all')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
+
+  // Get auth state for debugging
+  const { user, token, isAuthenticated } = useAuthStore()
 
   // API hooks
   const { data: reportsData, isLoading, error } = useReports(
@@ -43,6 +47,24 @@ export default function ReportsPage() {
 
   const reports = reportsData?.data?.data || []
   const totalReports = reportsData?.data?.total || 0
+
+  // Debug function to test API directly
+  const testAPI = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/reports/dashboard', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      const data = await response.json()
+      console.log('Direct API test:', data)
+      alert(`API Response: ${JSON.stringify(data, null, 2)}`)
+    } catch (error) {
+      console.error('API test error:', error)
+      alert(`API Error: ${error}`)
+    }
+  }
 
   const getStatusIcon = (status: Report['status']) => {
     switch (status) {
@@ -119,6 +141,46 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Debug Section */}
+      <Card className="mb-6 bg-yellow-50 border-yellow-200">
+        <CardHeader>
+          <CardTitle className="text-yellow-800">Debug Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <strong>Auth Status:</strong> {isAuthenticated ? '✅ Authenticated' : '❌ Not Authenticated'}
+            </div>
+            <div>
+              <strong>User:</strong> {user ? `${user.email} (${user.role})` : 'None'}
+            </div>
+            <div>
+              <strong>Token:</strong> {token ? `${token.substring(0, 20)}...` : 'None'}
+            </div>
+            <div>
+              <strong>Reports Data:</strong> {reportsData ? '✅ Loaded' : '❌ Not Loaded'}
+            </div>
+            <div>
+              <strong>Reports Count:</strong> {reports.length}
+            </div>
+            <div>
+              <strong>Total Reports:</strong> {totalReports}
+            </div>
+            <div>
+              <strong>Loading:</strong> {isLoading ? '⏳ Loading' : '✅ Complete'}
+            </div>
+            <div>
+              <strong>Error:</strong> {error ? '❌ ' + error : '✅ None'}
+            </div>
+            <div>
+              <Button onClick={testAPI} size="sm" variant="outline">
+                Test API Directly
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">

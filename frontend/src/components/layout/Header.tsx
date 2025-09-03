@@ -104,11 +104,19 @@ export function Header({ className }: HeaderProps) {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-3 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 p-1"
               >
-                <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user?.email?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                </div>
+                {user?.profileImage ? (
+                  <img 
+                    src={`http://localhost:3001${user.profileImage}`} 
+                    alt={user.email}
+                    className="h-8 w-8 rounded-full object-cover border-2 border-gray-200"
+                  />
+                ) : (
+                  <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">
+                      {user?.email?.[0]?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                )}
                 <span className="hidden lg:block text-gray-700 font-medium">
                   {user?.email}
                 </span>

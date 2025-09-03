@@ -1,0 +1,3503 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+var _this = this;
+var express = require('express');
+var cors = require('cors');
+var helmet = require('helmet');
+var rateLimit = require('express-rate-limit');
+var path = require('path');
+var multer = require('multer');
+var fs = require('fs');
+var bcrypt = require('bcryptjs');
+// Import database repositories
+var UserRepository = require('./repositories/UserRepository').UserRepository;
+var ReportRepository = require('./repositories/ReportRepository').ReportRepository;
+// Import forex service
+var forexService = require('./services/forexService');
+// Initialize app
+var app = express();
+var PORT = process.env.PORT || 3001;
+// Initialize repositories
+var userRepository = new UserRepository();
+var reportRepository = new ReportRepository();
+// Configure multer for file uploads
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        var uploadDir = 'uploads/evidence';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        var uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+var upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 15 * 1024 * 1024, // 15MB limit
+        files: 10 // Max 10 files per request
+    },
+    fileFilter: function (req, file, cb) {
+        var allowedTypes = [
+            // Images
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+            // Videos
+            'video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/webm',
+            // Documents
+            'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain', 'text/csv'
+        ];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error("Invalid file type: ".concat(file.mimetype, ". Allowed types: images, videos, PDFs, and common documents.")), false);
+        }
+    }
+});
+// Configure multer for profile image uploads
+var profileStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        var uploadDir = 'uploads/profile';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        var uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, "profile-".concat(uniqueSuffix).concat(path.extname(file.originalname)));
+    }
+});
+var profileUpload = multer({
+    storage: profileStorage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit for profile images
+    },
+    fileFilter: function (req, file, cb) {
+        // Only allow image files for profile images
+        var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed for profile pictures'), false);
+        }
+    }
+});
+// Middleware
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
+// Rate limiting
+var limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000, // Increased for development
+    message: {
+        success: false,
+        error: 'Too many requests, please try again later'
+    }
+});
+app.use(limiter);
+// Helper functions
+var generateToken = function (user) {
+    return Buffer.from(JSON.stringify({
+        userId: user.id,
+        email: user.email,
+        role: user.role
+    })).toString('base64');
+};
+var verifyToken = function (token) {
+    try {
+        return JSON.parse(Buffer.from(token, 'base64').toString());
+    }
+    catch (error) {
+        return null;
+    }
+};
+// Authentication middleware
+var authMiddleware = function (req, res, next) {
+    try {
+        var authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                success: false,
+                error: 'Access token required'
+            });
+        }
+        var token = authHeader.substring(7);
+        var decoded = verifyToken(token);
+        if (!decoded) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid token'
+            });
+        }
+        req.user = decoded;
+        next();
+    }
+    catch (error) {
+        return res.status(401).json({
+            success: false,
+            error: 'Authentication failed'
+        });
+    }
+};
+// Admin middleware
+var adminMiddleware = function (req, res, next) {
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+        return res.status(403).json({
+            success: false,
+            error: 'Access denied'
+        });
+    }
+    next();
+};
+// Utility functions
+var transformReportForFrontend = function (report) { return ({
+    id: report.id,
+    identifierType: report.identifier_type,
+    identifierValue: report.identifier_value,
+    category: report.category,
+    narrative: report.narrative,
+    amountLost: report.amount_lost || 0,
+    currency: report.currency || 'NPR',
+    status: report.status,
+    riskScore: report.risk_score || 0,
+    reporterUserId: report.reporter_user_id,
+    reporterEmail: report.reporter_email,
+    incidentDate: report.incident_date,
+    incidentChannel: report.incident_channel,
+    createdAt: report.created_at,
+    updatedAt: report.updated_at
+}); };
+// Routes
+// Health check
+app.get('/health', function (req, res) {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+// Auth routes
+app.post('/api/auth/register', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, email, phone, password, existingUser, newUser, token, error_1;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 3, , 4]);
+                _a = req.body, email = _a.email, phone = _a.phone, password = _a.password;
+                return [4 /*yield*/, userRepository.findByEmailOrPhone(email, phone)];
+            case 1:
+                existingUser = _b.sent();
+                if (existingUser) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'User already exists with this email or phone'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.createUser({
+                        email: email,
+                        phone: phone,
+                        password: password,
+                        role: 'member',
+                        name: 'New User'
+                    })];
+            case 2:
+                newUser = _b.sent();
+                token = generateToken(newUser);
+                res.json({
+                    success: true,
+                    data: {
+                        token: token,
+                        user: {
+                            id: newUser.id,
+                            email: newUser.email,
+                            role: newUser.role,
+                            isVerified: newUser.is_verified
+                        }
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_1 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to register user'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/auth/login', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, email, phone, password, user, passwordMatch, token, error_2;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                _a = req.body, email = _a.email, phone = _a.phone, password = _a.password;
+                console.log('Login attempt:', { email: email, phone: phone, password: password ? '******' : undefined });
+                return [4 /*yield*/, userRepository.findByEmailOrPhone(email, phone)];
+            case 1:
+                user = _b.sent();
+                console.log('User found:', user ? { id: user.id, email: user.email } : null);
+                if (!user) {
+                    console.log('No user found');
+                    return [2 /*return*/, res.status(401).json({
+                            success: false,
+                            error: 'Invalid credentials'
+                        })];
+                }
+                console.log('Password from request:', password);
+                console.log('Password hash from DB:', user.password_hash);
+                passwordMatch = bcrypt.compareSync(password, user.password_hash);
+                console.log('Password match:', passwordMatch);
+                if (!passwordMatch) {
+                    return [2 /*return*/, res.status(401).json({
+                            success: false,
+                            error: 'Invalid credentials'
+                        })];
+                }
+                token = generateToken(user);
+                res.json({
+                    success: true,
+                    data: {
+                        token: token,
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            role: user.role,
+                            isVerified: user.is_verified
+                        }
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_2 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to login'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/auth/profile', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var user, error_3;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, userRepository.findById(req.user.userId)];
+            case 1:
+                user = _a.sent();
+                if (!user) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'User not found'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: {
+                        id: user.id,
+                        email: user.email,
+                        phoneNumber: user.phone,
+                        role: user.role,
+                        isVerified: user.is_verified,
+                        profileImage: user.profile_image,
+                        createdAt: user.created_at,
+                        lastLogin: user.updated_at
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_3 = _a.sent();
+                console.error('Error fetching user profile:', error_3);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch user profile'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/auth/logout', authMiddleware, function (req, res) {
+    res.json({ success: true, message: 'Logged out successfully' });
+});
+app.post('/api/auth/refresh', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var token, decoded, user, newToken, error_4;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                token = req.body.token;
+                if (!token) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Token is required'
+                        })];
+                }
+                decoded = verifyToken(token);
+                if (!decoded) {
+                    return [2 /*return*/, res.status(401).json({
+                            success: false,
+                            error: 'Invalid token'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.findById(decoded.userId)];
+            case 1:
+                user = _a.sent();
+                if (!user) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'User not found'
+                        })];
+                }
+                newToken = generateToken(user);
+                res.json({
+                    success: true,
+                    data: {
+                        token: newToken,
+                        refreshToken: newToken,
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            phoneNumber: user.phone,
+                            role: user.role,
+                            isVerified: user.is_verified,
+                            createdAt: user.created_at,
+                            lastLogin: user.updated_at
+                        },
+                        expiresIn: 86400
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_4 = _a.sent();
+                console.error('Error refreshing token:', error_4);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to refresh token'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/auth/verify-otp', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, email, phoneNumber, otp, user, token, error_5;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                _a = req.body, email = _a.email, phoneNumber = _a.phoneNumber, otp = _a.otp;
+                return [4 /*yield*/, userRepository.findByEmailOrPhone(email, phoneNumber)];
+            case 1:
+                user = _b.sent();
+                if (!user) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'User not found'
+                        })];
+                }
+                // Mock OTP verification (always accept '123456')
+                if (otp !== '123456') {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Invalid OTP'
+                        })];
+                }
+                token = generateToken(user);
+                res.json({
+                    success: true,
+                    data: {
+                        token: token,
+                        refreshToken: token,
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            phoneNumber: user.phone,
+                            role: user.role,
+                            isVerified: user.is_verified,
+                            createdAt: user.created_at,
+                            lastLogin: user.updated_at
+                        },
+                        expiresIn: 86400
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_5 = _b.sent();
+                console.error('Error verifying OTP:', error_5);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to verify OTP'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.patch('/api/auth/users/:id/role', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var userId, role, user, error_6;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                userId = req.params.id;
+                role = req.body.role;
+                return [4 /*yield*/, userRepository.findById(userId)];
+            case 1:
+                user = _a.sent();
+                if (!user) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'User not found'
+                        })];
+                }
+                user.role = role;
+                return [4 /*yield*/, userRepository.updateUser(user)];
+            case 2:
+                _a.sent();
+                res.json({
+                    success: true,
+                    data: {
+                        message: "User role updated to ".concat(role),
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            role: user.role,
+                            isVerified: user.isVerified
+                        }
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_6 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to update user role'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// Report routes
+app.post('/api/reports', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var reportData, createdReport, error_7;
+    var _a, _b, _c;
+    return __generator(this, function (_d) {
+        switch (_d.label) {
+            case 0:
+                _d.trys.push([0, 2, , 3]);
+                reportData = {
+                    identifier_type: ((_a = req.body.identifierType) === null || _a === void 0 ? void 0 : _a.substring(0, 100)) || 'website',
+                    identifier_value: req.body.identifierValue,
+                    category: ((_b = req.body.scamCategory) === null || _b === void 0 ? void 0 : _b.substring(0, 100)) || 'other',
+                    narrative: req.body.narrative,
+                    amount_lost: req.body.amountLost || 0,
+                    currency: req.body.currency || 'INR',
+                    incident_date: req.body.incidentDate ? new Date(req.body.incidentDate) : null,
+                    incident_channel: ((_c = req.body.incidentChannel) === null || _c === void 0 ? void 0 : _c.substring(0, 100)) || 'other',
+                    reporter_user_id: req.user.userId,
+                    reporter_email: req.user.email || 'unknown@example.com',
+                    status: 'pending'
+                };
+                return [4 /*yield*/, reportRepository.createReport(reportData)];
+            case 1:
+                createdReport = _d.sent();
+                res.json({
+                    success: true,
+                    data: createdReport
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_7 = _d.sent();
+                console.error('Error creating report:', error_7);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to create report',
+                    details: error_7.message
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/reports', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var page, limit, status_1, category_1, search_1, offset, allReports, paginatedReports, error_8;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 5, , 6]);
+                page = parseInt(req.query.page) || 1;
+                limit = Math.min(parseInt(req.query.limit) || 20, 100);
+                status_1 = req.query.status;
+                category_1 = req.query.category;
+                search_1 = req.query.search;
+                offset = (page - 1) * limit;
+                allReports = void 0;
+                if (!(req.user.role === 'admin' || req.user.role === 'moderator')) return [3 /*break*/, 2];
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                allReports = _a.sent();
+                return [3 /*break*/, 4];
+            case 2: return [4 /*yield*/, reportRepository.findReportsByReporterId(req.user.userId)];
+            case 3:
+                allReports = _a.sent();
+                _a.label = 4;
+            case 4:
+                // Apply filters
+                if (status_1 && status_1 !== 'all') {
+                    allReports = allReports.filter(function (r) { return r.status === status_1; });
+                }
+                if (category_1 && category_1 !== 'all') {
+                    allReports = allReports.filter(function (r) { return r.category === category_1; });
+                }
+                if (search_1) {
+                    allReports = allReports.filter(function (r) {
+                        var _a, _b, _c;
+                        return ((_a = r.identifier_value) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(search_1.toLowerCase())) ||
+                            ((_b = r.category) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(search_1.toLowerCase())) ||
+                            ((_c = r.narrative) === null || _c === void 0 ? void 0 : _c.toLowerCase().includes(search_1.toLowerCase()));
+                    });
+                }
+                // Sort by creation date (newest first)
+                allReports.sort(function (a, b) { return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); });
+                paginatedReports = allReports.slice(offset, offset + limit);
+                res.json({
+                    success: true,
+                    data: {
+                        data: paginatedReports.map(transformReportForFrontend),
+                        total: allReports.length,
+                        page: page,
+                        limit: limit,
+                        totalPages: Math.ceil(allReports.length / limit)
+                    }
+                });
+                return [3 /*break*/, 6];
+            case 5:
+                error_8 = _a.sent();
+                console.error('Error fetching user reports:', error_8);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch reports'
+                });
+                return [3 /*break*/, 6];
+            case 6: return [2 /*return*/];
+        }
+    });
+}); });
+// Special routes should be defined before the generic :id route
+// Dashboard reports endpoint - moved before the :id route
+app.get('/api/reports/dashboard', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var page, limit, offset, allReports, totalReports, totalPages, reports, dashboardStats, error_9;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 5, , 6]);
+                page = parseInt(req.query.page) || 1;
+                limit = Math.min(parseInt(req.query.limit) || 20, 100);
+                offset = (page - 1) * limit;
+                allReports = void 0;
+                if (!(req.user.role === 'admin' || req.user.role === 'moderator')) return [3 /*break*/, 2];
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                allReports = _a.sent();
+                return [3 /*break*/, 4];
+            case 2: return [4 /*yield*/, reportRepository.findReportsByReporterId(req.user.userId)];
+            case 3:
+                allReports = _a.sent();
+                _a.label = 4;
+            case 4:
+                totalReports = allReports.length;
+                totalPages = Math.ceil(totalReports / limit);
+                reports = allReports.slice(offset, offset + limit).map(function (report) {
+                    var _a, _b;
+                    return ({
+                        id: report.id,
+                        category: report.category,
+                        identifierType: report.identifier_type,
+                        identifierValue: report.identifier_value,
+                        amountLost: report.amount_lost,
+                        currency: report.currency,
+                        status: report.status,
+                        riskScore: report.risk_score,
+                        reporterEmail: report.reporter_email,
+                        narrative: report.narrative,
+                        createdAt: report.created_at,
+                        updatedAt: report.updated_at,
+                        // Add summary for dashboard
+                        summary: ((_a = report.narrative) === null || _a === void 0 ? void 0 : _a.substring(0, 100)) + (((_b = report.narrative) === null || _b === void 0 ? void 0 : _b.length) > 100 ? '...' : ''),
+                        // Add status color indicator
+                        statusColor: report.status === 'verified' ? 'green' : report.status === 'rejected' ? 'red' : 'yellow'
+                    });
+                });
+                dashboardStats = {
+                    totalReports: totalReports,
+                    totalAmountLost: allReports.reduce(function (sum, r) { return sum + (r.amount_lost || 0); }, 0),
+                    pendingReports: allReports.filter(function (r) { return r.status === 'pending'; }).length,
+                    verifiedReports: allReports.filter(function (r) { return r.status === 'verified'; }).length,
+                    rejectedReports: allReports.filter(function (r) { return r.status === 'rejected'; }).length,
+                    averageRiskScore: allReports.length > 0
+                        ? Math.round(allReports.reduce(function (sum, r) { return sum + (r.risk_score || 0); }, 0) / allReports.length * 100) / 100
+                        : 0
+                };
+                res.json({
+                    success: true,
+                    data: {
+                        data: reports,
+                        total: totalReports,
+                        page: page,
+                        limit: limit,
+                        totalPages: totalPages
+                    }
+                });
+                return [3 /*break*/, 6];
+            case 5:
+                error_9 = _a.sent();
+                console.error('Error fetching dashboard reports:', error_9);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch dashboard reports'
+                });
+                return [3 /*break*/, 6];
+            case 6: return [2 /*return*/];
+        }
+    });
+}); });
+// Get similar reports for dashboard
+app.get('/api/reports/dashboard/similar', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, category, channel, amount, _b, timeframe, filters, daysAgo, similarReports, error_10;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                _c.trys.push([0, 2, , 3]);
+                _a = req.query, category = _a.category, channel = _a.channel, amount = _a.amount, _b = _a.timeframe, timeframe = _b === void 0 ? '30d' : _b;
+                filters = {};
+                if (category)
+                    filters.category = category;
+                if (channel)
+                    filters.channel = channel;
+                if (amount)
+                    filters.amount = parseFloat(amount);
+                daysAgo = new Date();
+                daysAgo.setDate(daysAgo.getDate() - parseInt(timeframe));
+                return [4 /*yield*/, reportRepository.findSimilarReports(filters, daysAgo)];
+            case 1:
+                similarReports = _c.sent();
+                res.json({
+                    success: true,
+                    data: similarReports
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_10 = _c.sent();
+                console.error('Error fetching similar reports for dashboard:', error_10);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch similar reports'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Stats endpoint - moved before the :id route
+app.get('/api/reports/stats', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var allReports, totalAmountLost, _i, allReports_1, report, amount, currency, amountInINR, error_11, averageAmount, recentActivity, categoryBreakdown, currencyBreakdown, totalUsers, stats, error_12;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 13, , 14]);
+                allReports = void 0;
+                if (!(req.user.role === 'admin' || req.user.role === 'moderator')) return [3 /*break*/, 2];
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                allReports = _a.sent();
+                return [3 /*break*/, 4];
+            case 2: return [4 /*yield*/, reportRepository.findReportsByReporterId(req.user.userId)];
+            case 3:
+                allReports = _a.sent();
+                _a.label = 4;
+            case 4:
+                totalAmountLost = 0;
+                _a.label = 5;
+            case 5:
+                _a.trys.push([5, 10, , 11]);
+                _i = 0, allReports_1 = allReports;
+                _a.label = 6;
+            case 6:
+                if (!(_i < allReports_1.length)) return [3 /*break*/, 9];
+                report = allReports_1[_i];
+                amount = parseFloat(report.amount_lost) || 0;
+                currency = report.currency || 'INR';
+                return [4 /*yield*/, forexService.convertToINR(amount, currency)];
+            case 7:
+                amountInINR = _a.sent();
+                totalAmountLost += amountInINR;
+                _a.label = 8;
+            case 8:
+                _i++;
+                return [3 /*break*/, 6];
+            case 9: return [3 /*break*/, 11];
+            case 10:
+                error_11 = _a.sent();
+                console.error('Error converting currencies:', error_11);
+                // Fallback to simple addition if forex service fails
+                totalAmountLost = allReports.reduce(function (sum, report) {
+                    return sum + (parseFloat(report.amount_lost) || 0);
+                }, 0);
+                return [3 /*break*/, 11];
+            case 11:
+                averageAmount = totalAmountLost / (allReports.length || 1);
+                recentActivity = allReports
+                    .sort(function (a, b) { return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); })
+                    .slice(0, 5)
+                    .map(function (report) { return ({
+                    id: report.id,
+                    category: report.category,
+                    identifierValue: report.identifier_value,
+                    status: report.status,
+                    createdAt: report.created_at
+                }); });
+                categoryBreakdown = allReports.reduce(function (acc, report) {
+                    acc[report.category] = (acc[report.category] || 0) + 1;
+                    return acc;
+                }, {});
+                currencyBreakdown = allReports.reduce(function (acc, report) {
+                    var currency = report.currency || 'INR';
+                    var amount = parseFloat(report.amount_lost) || 0;
+                    if (!acc[currency]) {
+                        acc[currency] = { count: 0, totalAmount: 0 };
+                    }
+                    acc[currency].count += 1;
+                    acc[currency].totalAmount += amount;
+                    return acc;
+                }, {});
+                return [4 /*yield*/, userRepository.countUsers()];
+            case 12:
+                totalUsers = _a.sent();
+                stats = {
+                    totalReports: allReports.length,
+                    pendingReports: allReports.filter(function (r) { return r.status === 'pending' || r.status === 'under_review'; }).length,
+                    approvedReports: allReports.filter(function (r) { return r.status === 'verified'; }).length,
+                    rejectedReports: allReports.filter(function (r) { return r.status === 'rejected'; }).length,
+                    totalAmountLost: totalAmountLost,
+                    averageAmount: Math.round(averageAmount * 100) / 100,
+                    totalUsers: totalUsers,
+                    recentActivity: recentActivity,
+                    categoryBreakdown: categoryBreakdown,
+                    currencyBreakdown: currencyBreakdown
+                };
+                res.json({
+                    success: true,
+                    data: stats
+                });
+                return [3 /*break*/, 14];
+            case 13:
+                error_12 = _a.sent();
+                console.error('Error fetching report stats:', error_12);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch report stats'
+                });
+                return [3 /*break*/, 14];
+            case 14: return [2 /*return*/];
+        }
+    });
+}); });
+// Generic report by ID endpoint - should be after specific routes
+app.get('/api/reports/:id', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var report, error_13;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, reportRepository.findById(req.params.id)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Report not found'
+                        })];
+                }
+                if (report.reporter_user_id !== req.user.userId && req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: transformReportForFrontend(report)
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_13 = _a.sent();
+                console.error('Error fetching report by ID:', error_13);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch report'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Detailed report view endpoint - provides comprehensive report information
+app.get('/api/reports/:id/detailed', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var report, similarReports, evidenceFiles, riskAssessment, detailedReport, error_14;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 4, , 5]);
+                return [4 /*yield*/, reportRepository.findById(req.params.id)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Report not found'
+                        })];
+                }
+                if (report.reporter_user_id !== req.user.userId && req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied'
+                        })];
+                }
+                return [4 /*yield*/, reportRepository.findSimilarReports({
+                        category: report.category,
+                        channel: report.incident_channel,
+                        amount: report.amount_lost
+                    }, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))];
+            case 2:
+                similarReports = _a.sent();
+                return [4 /*yield*/, reportRepository.getFilesForReport(report.id)];
+            case 3:
+                evidenceFiles = _a.sent();
+                riskAssessment = {
+                    level: report.risk_score >= 8 ? 'High' : report.risk_score >= 5 ? 'Medium' : 'Low',
+                    factors: [
+                        report.amount_lost > 10000 ? 'High financial impact' : null,
+                        report.incident_channel === 'online' ? 'Digital vulnerability' : null,
+                        report.category === 'investment' || report.category === 'crypto' ? 'Complex scam type' : null
+                    ].filter(Boolean)
+                };
+                detailedReport = {
+                    // Basic report info
+                    id: report.id,
+                    identifierType: report.identifier_type,
+                    identifierValue: report.identifier_value,
+                    category: report.category,
+                    narrative: report.narrative,
+                    amountLost: report.amount_lost || 0,
+                    currency: report.currency || 'NPR',
+                    status: report.status,
+                    riskScore: report.risk_score || 0,
+                    // User info
+                    reporterUserId: report.reporter_user_id,
+                    reporterEmail: report.reporter_email,
+                    // Incident details
+                    incidentDate: report.incident_date,
+                    incidentChannel: report.incident_channel,
+                    statusReason: report.status_reason,
+                    // Timestamps
+                    createdAt: report.created_at,
+                    updatedAt: report.updated_at,
+                    // Enhanced data
+                    riskAssessment: riskAssessment,
+                    similarReports: similarReports.slice(0, 5).map(function (r) { return ({
+                        id: r.id,
+                        category: r.category,
+                        amountLost: r.amount_lost,
+                        status: r.status,
+                        createdAt: r.created_at
+                    }); }),
+                    evidenceFiles: evidenceFiles,
+                    // Statistics
+                    totalSimilarReports: similarReports.length,
+                    averageAmountInCategory: similarReports.length > 0
+                        ? similarReports.reduce(function (sum, r) { return sum + (r.amount_lost || 0); }, 0) / similarReports.length
+                        : 0,
+                    // Recommendations
+                    recommendations: [
+                        'Report to local authorities if amount exceeds ₹10,000',
+                        'Monitor your accounts for suspicious activity',
+                        'Consider freezing affected accounts',
+                        'Document all communication with the scammer'
+                    ]
+                };
+                res.json({
+                    success: true,
+                    data: detailedReport
+                });
+                return [3 /*break*/, 5];
+            case 4:
+                error_14 = _a.sent();
+                console.error('Error fetching detailed report:', error_14);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch detailed report'
+                });
+                return [3 /*break*/, 5];
+            case 5: return [2 /*return*/];
+        }
+    });
+}); });
+app.patch('/api/reports/:id/status', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, _a, status_2, reason, notes, report, updateData, updatedReport, error_15;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 3, , 4]);
+                id = req.params.id;
+                _a = req.body, status_2 = _a.status, reason = _a.reason, notes = _a.notes;
+                return [4 /*yield*/, reportRepository.findById(id)];
+            case 1:
+                report = _b.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({ success: false, error: 'Report not found' })];
+                }
+                if (report.reporter_user_id !== req.user.userId && req.user.role !== 'admin' && req.user.role !== 'moderator') {
+                    return [2 /*return*/, res.status(403).json({ success: false, error: 'Access denied' })];
+                }
+                updateData = {
+                    status: status_2
+                };
+                if (reason) {
+                    updateData.status_reason = reason;
+                }
+                else if (notes) {
+                    updateData.status_reason = notes;
+                }
+                return [4 /*yield*/, reportRepository.updateReportStatus(id, status_2, req.user.userId, reason, notes)];
+            case 2:
+                updatedReport = _b.sent();
+                if (!updatedReport) {
+                    return [2 /*return*/, res.status(500).json({
+                            success: false,
+                            error: 'Failed to update report'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: transformReportForFrontend(updatedReport)
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_15 = _b.sent();
+                console.error('Error updating report status:', error_15);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to update report status',
+                    details: error_15.message
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// Update report endpoint
+app.put('/api/reports/:id', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, updateData, existingReport, isOwner, isModerator, validatedData, amount, date, validStatuses, riskScore, updatedReport, error_16;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                id = req.params.id;
+                updateData = req.body;
+                return [4 /*yield*/, reportRepository.findById(id)];
+            case 1:
+                existingReport = _a.sent();
+                if (!existingReport) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Report not found'
+                        })];
+                }
+                isOwner = existingReport.reporter_user_id === req.user.userId;
+                isModerator = req.user.role === 'moderator' || req.user.role === 'admin';
+                if (!isOwner && !isModerator) {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied. You can only edit your own reports.'
+                        })];
+                }
+                validatedData = {};
+                if (updateData.category) {
+                    validatedData.category = updateData.category.substring(0, 100);
+                }
+                if (updateData.identifierType) {
+                    validatedData.identifier_type = updateData.identifierType.substring(0, 100);
+                }
+                if (updateData.identifierValue) {
+                    validatedData.identifier_value = updateData.identifierValue.substring(0, 500);
+                }
+                if (updateData.narrative) {
+                    validatedData.narrative = updateData.narrative.substring(0, 5000);
+                }
+                if (updateData.amountLost !== undefined) {
+                    amount = parseFloat(updateData.amountLost);
+                    if (isNaN(amount) || amount < 0) {
+                        return [2 /*return*/, res.status(400).json({
+                                success: false,
+                                error: 'Invalid amount. Must be a positive number.'
+                            })];
+                    }
+                    validatedData.amount_lost = amount;
+                }
+                if (updateData.currency) {
+                    validatedData.currency = updateData.currency.substring(0, 10);
+                }
+                if (updateData.incidentDate) {
+                    date = new Date(updateData.incidentDate);
+                    if (isNaN(date.getTime())) {
+                        return [2 /*return*/, res.status(400).json({
+                                success: false,
+                                error: 'Invalid incident date format.'
+                            })];
+                    }
+                    validatedData.incident_date = date;
+                }
+                if (updateData.incidentChannel) {
+                    validatedData.incident_channel = updateData.incidentChannel.substring(0, 100);
+                }
+                if (updateData.contactMethod) {
+                    validatedData.contact_method = updateData.contactMethod.substring(0, 100);
+                }
+                if (updateData.suspectedLinks && Array.isArray(updateData.suspectedLinks)) {
+                    validatedData.suspected_links = JSON.stringify(updateData.suspectedLinks);
+                }
+                if (updateData.additionalInfo) {
+                    validatedData.additional_info = JSON.stringify(updateData.additionalInfo);
+                }
+                // Only moderators and admins can change status
+                if (updateData.status && isModerator) {
+                    validStatuses = ['pending', 'under_review', 'verified', 'rejected'];
+                    if (!validStatuses.includes(updateData.status)) {
+                        return [2 /*return*/, res.status(400).json({
+                                success: false,
+                                error: 'Invalid status. Must be one of: pending, under_review, verified, rejected'
+                            })];
+                    }
+                    validatedData.status = updateData.status;
+                }
+                // Only moderators and admins can change risk score
+                if (updateData.riskScore !== undefined && isModerator) {
+                    riskScore = parseInt(updateData.riskScore);
+                    if (isNaN(riskScore) || riskScore < 0 || riskScore > 100) {
+                        return [2 /*return*/, res.status(400).json({
+                                success: false,
+                                error: 'Invalid risk score. Must be a number between 0 and 100.'
+                            })];
+                    }
+                    validatedData.risk_score = riskScore;
+                }
+                return [4 /*yield*/, reportRepository.updateReport(id, validatedData, req.user.userId)];
+            case 2:
+                updatedReport = _a.sent();
+                if (!updatedReport) {
+                    return [2 /*return*/, res.status(500).json({
+                            success: false,
+                            error: 'Failed to update report'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: {
+                        message: 'Report updated successfully',
+                        report: updatedReport
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_16 = _a.sent();
+                console.error('Error updating report:', error_16);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to update report',
+                    details: error_16.message
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.delete('/api/reports/:id', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, report, error_17;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                id = req.params.id;
+                return [4 /*yield*/, reportRepository.findById(id)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({ success: false, error: 'Report not found' })];
+                }
+                if (report.reporter_user_id !== req.user.userId && req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({ success: false, error: 'Access denied' })];
+                }
+                return [4 /*yield*/, reportRepository.deleteReport(report.id)];
+            case 2:
+                _a.sent();
+                res.json({
+                    success: true,
+                    message: 'Report deleted successfully'
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_17 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to delete report'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// File upload endpoints
+app.post('/api/reports/:id/evidence', authMiddleware, upload.array('evidence', 10), function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var reportId, files, maxSize_1, oversizedFiles, uploadedFiles, error_18;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                reportId = req.params.id;
+                files = req.files;
+                if (!files || files.length === 0) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: { message: 'No files uploaded' }
+                        })];
+                }
+                maxSize_1 = 15 * 1024 * 1024;
+                oversizedFiles = files.filter(function (file) { return file.size > maxSize_1; });
+                if (oversizedFiles.length > 0) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: {
+                                message: "Files exceed 15MB limit: ".concat(oversizedFiles.map(function (f) { return f.originalname; }).join(', '))
+                            }
+                        })];
+                }
+                uploadedFiles = files.map(function (file) { return ({
+                    id: "file_".concat(Date.now(), "_").concat(Math.random().toString(36).substr(2, 9)),
+                    fileName: file.originalname,
+                    fileSize: file.size,
+                    mimeType: file.mimetype,
+                    storageUrl: "/uploads/evidence/".concat(file.filename),
+                    uploadedAt: new Date().toISOString()
+                }); });
+                return [4 /*yield*/, reportRepository.addFilesToReport(reportId, uploadedFiles)];
+            case 1:
+                _a.sent();
+                res.json({
+                    success: true,
+                    data: {
+                        message: "".concat(files.length, " file(s) uploaded successfully"),
+                        files: uploadedFiles
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_18 = _a.sent();
+                console.error('File upload error:', error_18);
+                res.status(500).json({
+                    success: false,
+                    error: { message: error_18.message || 'Failed to upload files' }
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/reports/:id/evidence', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var reportId, files, error_19;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                reportId = req.params.id;
+                return [4 /*yield*/, reportRepository.getFilesForReport(reportId)];
+            case 1:
+                files = _a.sent();
+                res.json({
+                    success: true,
+                    data: files
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_19 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: { message: error_19.message || 'Failed to fetch evidence' }
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Get report status history
+app.get('/api/reports/:id/history', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var reportId, report, history_1, fullHistory, error_20;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                reportId = req.params.id;
+                return [4 /*yield*/, reportRepository.findById(reportId)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Report not found'
+                        })];
+                }
+                if (report.reporter_user_id !== req.user.userId && req.user.role !== 'admin' && req.user.role !== 'moderator') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied'
+                        })];
+                }
+                return [4 /*yield*/, reportRepository.getStatusHistory(reportId)];
+            case 2:
+                history_1 = _a.sent();
+                fullHistory = __spreadArray([
+                    {
+                        id: 'initial',
+                        report_id: reportId,
+                        old_status: null,
+                        new_status: 'pending',
+                        changed_by: null,
+                        changed_by_email: null,
+                        changed_by_name: null,
+                        reason: 'Report submitted',
+                        notes: 'Initial report submission',
+                        created_at: report.created_at
+                    }
+                ], history_1, true);
+                res.json({
+                    success: true,
+                    data: fullHistory
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_20 = _a.sent();
+                console.error('Error fetching report history:', error_20);
+                res.status(500).json({
+                    success: false,
+                    error: { message: error_20.message || 'Failed to fetch report history' }
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// Stats endpoint has been moved before the generic :id route
+// Dashboard reports endpoint has been moved before the generic :id route
+// Similar reports endpoint
+app.get('/api/reports/:id/similar', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id_1, limit, currentReport_1, allReports, similarReports, error_21;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                id_1 = req.params.id;
+                limit = parseInt(req.query.limit) || 5;
+                return [4 /*yield*/, reportRepository.findById(id_1)];
+            case 1:
+                currentReport_1 = _a.sent();
+                if (!currentReport_1) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Report not found'
+                        })];
+                }
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 2:
+                allReports = _a.sent();
+                similarReports = allReports
+                    .filter(function (r) { return r.id !== id_1 && r.category === currentReport_1.category; })
+                    .slice(0, limit)
+                    .map(function (report) { return ({
+                    id: report.id,
+                    category: report.category,
+                    identifierType: report.identifier_type,
+                    identifierValue: report.identifier_value,
+                    amountLost: report.amount_lost,
+                    currency: report.currency,
+                    status: report.status,
+                    riskScore: report.risk_score,
+                    reporterEmail: report.reporter_email,
+                    narrative: report.narrative,
+                    createdAt: report.created_at
+                }); });
+                res.json({
+                    success: true,
+                    data: similarReports
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_21 = _a.sent();
+                console.error('Error fetching similar reports:', error_21);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch similar reports'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// Search routes
+app.get('/api/search', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var query_1, type_1, category_2, status_3, riskScoreMin_1, riskScoreMax_1, dateFrom, dateTo, page, limit, sortBy_1, sortOrder_1, includeFacets, includeSuggestions, filteredReports, fromDate_1, toDate_1, offset, paginatedReports, searchResults, facets, allReports, suggestions_1, allReports, seen_1, executionTime, error_22;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 6, , 7]);
+                query_1 = req.query.text || req.query.q;
+                type_1 = req.query.type;
+                category_2 = req.query.category;
+                status_3 = req.query.status;
+                riskScoreMin_1 = req.query.riskScoreMin ? parseInt(req.query.riskScoreMin) : undefined;
+                riskScoreMax_1 = req.query.riskScoreMax ? parseInt(req.query.riskScoreMax) : undefined;
+                dateFrom = req.query.dateFrom;
+                dateTo = req.query.dateTo;
+                page = parseInt(req.query.page) || 1;
+                limit = Math.min(parseInt(req.query.limit) || 20, 100);
+                sortBy_1 = req.query.sortBy || 'relevance';
+                sortOrder_1 = req.query.sortOrder || 'DESC';
+                includeFacets = req.query.includeFacets === 'true';
+                includeSuggestions = req.query.includeSuggestions === 'true';
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                filteredReports = _a.sent();
+                // Apply search query
+                if (query_1) {
+                    filteredReports = filteredReports.filter(function (r) {
+                        var _a, _b, _c, _d;
+                        return ((_a = r.identifier_value) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(query_1.toLowerCase())) ||
+                            ((_b = r.category) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(query_1.toLowerCase())) ||
+                            ((_c = r.narrative) === null || _c === void 0 ? void 0 : _c.toLowerCase().includes(query_1.toLowerCase())) ||
+                            ((_d = r.reporter_email) === null || _d === void 0 ? void 0 : _d.toLowerCase().includes(query_1.toLowerCase()));
+                    });
+                }
+                // Apply filters
+                if (type_1 && type_1 !== 'all') {
+                    filteredReports = filteredReports.filter(function (r) { return r.identifier_type === type_1; });
+                }
+                if (category_2 && category_2 !== 'all') {
+                    filteredReports = filteredReports.filter(function (r) { return r.category === category_2; });
+                }
+                if (status_3 && status_3 !== 'all') {
+                    filteredReports = filteredReports.filter(function (r) { return r.status === status_3; });
+                }
+                if (riskScoreMin_1 !== undefined) {
+                    filteredReports = filteredReports.filter(function (r) { return (r.risk_score || 0) >= riskScoreMin_1; });
+                }
+                if (riskScoreMax_1 !== undefined) {
+                    filteredReports = filteredReports.filter(function (r) { return (r.risk_score || 0) <= riskScoreMax_1; });
+                }
+                if (dateFrom) {
+                    fromDate_1 = new Date(dateFrom);
+                    filteredReports = filteredReports.filter(function (r) { return new Date(r.created_at) >= fromDate_1; });
+                }
+                if (dateTo) {
+                    toDate_1 = new Date(dateTo);
+                    filteredReports = filteredReports.filter(function (r) { return new Date(r.created_at) <= toDate_1; });
+                }
+                // Apply sorting
+                filteredReports.sort(function (a, b) {
+                    var aValue, bValue;
+                    switch (sortBy_1) {
+                        case 'date':
+                            aValue = new Date(a.created_at).getTime();
+                            bValue = new Date(b.created_at).getTime();
+                            break;
+                        case 'risk_score':
+                            aValue = a.risk_score || 0;
+                            bValue = b.risk_score || 0;
+                            break;
+                        case 'title':
+                            aValue = a.identifier_value || '';
+                            bValue = b.identifier_value || '';
+                            break;
+                        default:
+                            aValue = a.risk_score || 0;
+                            bValue = b.risk_score || 0;
+                    }
+                    return sortOrder_1 === 'ASC' ? (aValue > bValue ? 1 : -1) : (aValue < bValue ? 1 : -1);
+                });
+                offset = (page - 1) * limit;
+                paginatedReports = filteredReports.slice(offset, offset + limit);
+                searchResults = paginatedReports.map(function (report) {
+                    var _a;
+                    return ({
+                        id: report.id,
+                        type: 'report',
+                        title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                        description: ((_a = report.narrative) === null || _a === void 0 ? void 0 : _a.substring(0, 200)) + (report.narrative && report.narrative.length > 200 ? '...' : ''),
+                        relevance: report.risk_score || 0,
+                        metadata: {
+                            category: report.category,
+                            identifierType: report.identifier_type,
+                            identifierValue: report.identifier_value,
+                            amountLost: report.amount_lost,
+                            currency: report.currency,
+                            status: report.status,
+                            riskScore: report.risk_score,
+                            reporterEmail: report.reporter_email,
+                            createdAt: report.created_at
+                        },
+                        url: "/dashboard/reports/".concat(report.id),
+                        timestamp: report.created_at
+                    });
+                });
+                facets = undefined;
+                if (!includeFacets) return [3 /*break*/, 3];
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 2:
+                allReports = _a.sent();
+                facets = {
+                    types: allReports.reduce(function (acc, r) {
+                        acc[r.identifierType] = (acc[r.identifierType] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    categories: allReports.reduce(function (acc, r) {
+                        acc[r.category] = (acc[r.category] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    statuses: allReports.reduce(function (acc, r) {
+                        acc[r.status] = (acc[r.status] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    riskScores: {
+                        low: allReports.filter(function (r) { return (r.riskScore || 0) < 60; }).length,
+                        medium: allReports.filter(function (r) { return (r.riskScore || 0) >= 60 && (r.riskScore || 0) < 80; }).length,
+                        high: allReports.filter(function (r) { return (r.riskScore || 0) >= 80; }).length
+                    }
+                };
+                _a.label = 3;
+            case 3:
+                suggestions_1 = undefined;
+                if (!(includeSuggestions && query_1)) return [3 /*break*/, 5];
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 4:
+                allReports = _a.sent();
+                seen_1 = new Set();
+                suggestions_1 = [];
+                allReports.forEach(function (report) {
+                    var _a, _b;
+                    if (((_a = report.category) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(query_1.toLowerCase())) && !seen_1.has(report.category)) {
+                        suggestions_1.push(report.category);
+                        seen_1.add(report.category);
+                    }
+                    if (((_b = report.identifier_value) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(query_1.toLowerCase())) && !seen_1.has(report.identifier_value)) {
+                        suggestions_1.push(report.identifier_value);
+                        seen_1.add(report.identifier_value);
+                    }
+                });
+                suggestions_1 = suggestions_1.slice(0, 5);
+                _a.label = 5;
+            case 5:
+                executionTime = Date.now() - Date.now();
+                res.json({
+                    success: true,
+                    data: {
+                        results: searchResults,
+                        total: filteredReports.length,
+                        page: page,
+                        limit: limit,
+                        executionTime: executionTime,
+                        facets: facets,
+                        suggestions: suggestions_1,
+                        query: {
+                            text: query_1,
+                            filters: { type: type_1, category: category_2, status: status_3, riskScoreMin: riskScoreMin_1, riskScoreMax: riskScoreMax_1, dateFrom: dateFrom, dateTo: dateTo },
+                            processedQuery: query_1 || 'all'
+                        }
+                    }
+                });
+                return [3 /*break*/, 7];
+            case 6:
+                error_22 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Search failed'
+                });
+                return [3 /*break*/, 7];
+            case 7: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/search/autocomplete', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var query_2, limit, suggestions_2, seen_2, reports_1, categories, limitedSuggestions, error_23;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                query_2 = req.query.query;
+                limit = Math.min(parseInt(req.query.limit) || 10, 50);
+                if (!query_2 || query_2.length < 2) {
+                    return [2 /*return*/, res.json({
+                            success: true,
+                            data: { suggestions: [] }
+                        })];
+                }
+                suggestions_2 = [];
+                seen_2 = new Set();
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                reports_1 = _a.sent();
+                reports_1.forEach(function (report) {
+                    var _a;
+                    if (((_a = report.identifier_value) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(query_2.toLowerCase())) && !seen_2.has(report.identifier_value)) {
+                        suggestions_2.push({
+                            text: report.identifier_value,
+                            type: 'identifier',
+                            count: reports_1.filter(function (r) { return r.identifier_value === report.identifier_value; }).length
+                        });
+                        seen_2.add(report.identifier_value);
+                    }
+                });
+                categories = ['phishing', 'romance', 'investment', 'tech_support', 'lottery', 'job_scam', 'rental', 'crypto'];
+                categories.forEach(function (cat) {
+                    if (cat.toLowerCase().includes(query_2.toLowerCase())) {
+                        var count = reports_1.filter(function (r) { return r.category === cat; }).length;
+                        if (count > 0) {
+                            suggestions_2.push({
+                                text: cat,
+                                type: 'category',
+                                count: count
+                            });
+                        }
+                    }
+                });
+                suggestions_2.sort(function (a, b) { return b.count - a.count; });
+                limitedSuggestions = suggestions_2.slice(0, limit);
+                res.json({
+                    success: true,
+                    data: { suggestions: limitedSuggestions }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_23 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Autocomplete failed'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/search/trending', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var timeframe, limit, categoryCounts_1, reports, trending, error_24;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                timeframe = req.query.timeframe || 'day';
+                limit = Math.min(parseInt(req.query.limit) || 10, 50);
+                categoryCounts_1 = {};
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                reports = _a.sent();
+                reports.forEach(function (report) {
+                    categoryCounts_1[report.category] = (categoryCounts_1[report.category] || 0) + 1;
+                });
+                trending = Object.entries(categoryCounts_1)
+                    .map(function (_a) {
+                    var value = _a[0], count = _a[1];
+                    return ({ value: value, count: count, type: 'category' });
+                })
+                    .sort(function (a, b) { return b.count - a.count; })
+                    .slice(0, limit);
+                res.json({
+                    success: true,
+                    data: trending
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_24 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to get trending searches'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/search/similar', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var itemId_1, type, limit_1, currentReport, similarReports, error_25;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                itemId_1 = req.query.itemId;
+                type = req.query.type;
+                limit_1 = Math.min(parseInt(req.query.limit) || 10, 50);
+                if (!itemId_1 || !type) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'itemId and type are required'
+                        })];
+                }
+                return [4 /*yield*/, reportRepository.findById(itemId_1)];
+            case 1:
+                currentReport = _a.sent();
+                if (!currentReport) {
+                    return [2 /*return*/, res.json({
+                            success: true,
+                            data: []
+                        })];
+                }
+                return [4 /*yield*/, reportRepository.findReportsByCategory(currentReport.category)
+                        .then(function (reports) { return reports.filter(function (r) { return r.id !== itemId_1; }); })
+                        .then(function (reports) { return reports.slice(0, limit_1); })
+                        .then(function (reports) { return reports.map(function (report) {
+                        var _a;
+                        return ({
+                            id: report.id,
+                            type: 'report',
+                            title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                            description: ((_a = report.narrative) === null || _a === void 0 ? void 0 : _a.substring(0, 200)) + (report.narrative && report.narrative.length > 200 ? '...' : ''),
+                            relevance: report.risk_score || 0,
+                            metadata: {
+                                category: report.category,
+                                identifierType: report.identifier_type,
+                                identifierValue: report.identifier_value,
+                                amountLost: report.amount_lost,
+                                currency: report.currency,
+                                status: report.status,
+                                riskScore: report.risk_score,
+                                reporterEmail: report.reporter_email,
+                                createdAt: report.created_at
+                            },
+                            url: "/dashboard/reports/".concat(report.id),
+                            timestamp: report.created_at
+                        });
+                    }); })];
+            case 2:
+                similarReports = _a.sent();
+                res.json({
+                    success: true,
+                    data: similarReports
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_25 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to find similar items'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/search/analytics', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var timeframe, totalReports, totalSearches, uniqueUsers, _a, analytics, _b, error_26;
+    var _c, _d, _e, _f;
+    return __generator(this, function (_g) {
+        switch (_g.label) {
+            case 0:
+                _g.trys.push([0, 6, , 7]);
+                timeframe = req.query.timeframe || 'month';
+                return [4 /*yield*/, reportRepository.countReports()];
+            case 1:
+                totalReports = _g.sent();
+                totalSearches = totalReports * 3;
+                _a = Set.bind;
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 2:
+                uniqueUsers = new (_a.apply(Set, [void 0, _g.sent()]))().size;
+                _c = {
+                    totalSearches: totalSearches,
+                    uniqueUsers: uniqueUsers
+                };
+                _d = { query: 'phishing' };
+                return [4 /*yield*/, reportRepository.countReportsByCategory('phishing')];
+            case 3:
+                _b = [
+                    (_d.count = (_g.sent()) * 2, _d)
+                ];
+                _e = { query: 'investment' };
+                return [4 /*yield*/, reportRepository.countReportsByCategory('investment')];
+            case 4:
+                _b = _b.concat([
+                    (_e.count = (_g.sent()) * 2, _e)
+                ]);
+                _f = { query: 'tech support' };
+                return [4 /*yield*/, reportRepository.countReportsByCategory('tech_support')];
+            case 5:
+                analytics = (_c.topQueries = _b.concat([
+                    (_f.count = (_g.sent()) * 2, _f)
+                ]),
+                    _c.searchesByType = {
+                        'report': totalSearches * 0.8,
+                        'entity': totalSearches * 0.15,
+                        'identifier': totalSearches * 0.05
+                    },
+                    _c.averageResultsPerQuery = Math.round(totalReports / totalSearches * 100) / 100,
+                    _c.averageExecutionTime = 45,
+                    _c.popularFilters = {
+                        'category': totalSearches * 0.6,
+                        'status': totalSearches * 0.4,
+                        'risk_score': totalSearches * 0.3,
+                        'date_range': totalSearches * 0.2
+                    },
+                    _c.trendsOverTime = [
+                        { date: '2025-08-20', searches: Math.floor(totalSearches * 0.3) },
+                        { date: '2025-08-21', searches: Math.floor(totalSearches * 0.25) },
+                        { date: '2025-08-22', searches: Math.floor(totalSearches * 0.2) },
+                        { date: '2025-08-23', searches: Math.floor(totalSearches * 0.15) },
+                        { date: '2025-08-24', searches: Math.floor(totalSearches * 0.1) }
+                    ],
+                    _c);
+                res.json({
+                    success: true,
+                    data: analytics
+                });
+                return [3 /*break*/, 7];
+            case 6:
+                error_26 = _g.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to get search analytics'
+                });
+                return [3 /*break*/, 7];
+            case 7: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/search/saved', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var savedSearches, error_27;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, userRepository.findSavedSearchesByUserId(req.user.userId)];
+            case 1:
+                savedSearches = _a.sent();
+                res.json({
+                    success: true,
+                    data: savedSearches
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_27 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch saved searches'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/search/save', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, query, filters, name_1, savedSearch, error_28;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                _a = req.body, query = _a.query, filters = _a.filters, name_1 = _a.name;
+                if (!query) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Query is required'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.saveSearch({
+                        query: query,
+                        filters: filters || {},
+                        name: name_1 || "Search: ".concat(query.slice(0, 30)).concat(query.length > 30 ? '...' : ''),
+                        userId: req.user.userId,
+                        createdAt: new Date().toISOString()
+                    })];
+            case 1:
+                savedSearch = _b.sent();
+                res.json({
+                    success: true,
+                    data: savedSearch
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_28 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to save search'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Dashboard routes
+app.get('/api/dashboard/reports', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var page, limit, status_4, category, search, offset, filteredReports, total, userReports, filters, searchResult, allReports, startIndex, endIndex, paginatedReports, error_29;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 7, , 8]);
+                page = parseInt(req.query.page) || 1;
+                limit = Math.min(parseInt(req.query.limit) || 20, 100);
+                status_4 = req.query.status;
+                category = req.query.category;
+                search = req.query.search;
+                offset = (page - 1) * limit;
+                filteredReports = [];
+                total = 0;
+                if (!(req.user.role !== 'admin' && req.user.role !== 'moderator')) return [3 /*break*/, 2];
+                return [4 /*yield*/, reportRepository.findReportsByReporterId(req.user.userId)];
+            case 1:
+                userReports = _a.sent();
+                filteredReports = userReports;
+                total = userReports.length;
+                return [3 /*break*/, 6];
+            case 2:
+                filters = {};
+                if (status_4 && status_4 !== 'all')
+                    filters.status = status_4;
+                if (category && category !== 'all')
+                    filters.category = category;
+                if (!search) return [3 /*break*/, 4];
+                return [4 /*yield*/, reportRepository.searchReports(search, filters, page, limit)];
+            case 3:
+                searchResult = _a.sent();
+                filteredReports = searchResult.data;
+                total = searchResult.total;
+                return [3 /*break*/, 6];
+            case 4: return [4 /*yield*/, reportRepository.findAllReports()];
+            case 5:
+                allReports = _a.sent();
+                filteredReports = allReports;
+                total = allReports.length;
+                _a.label = 6;
+            case 6:
+                startIndex = offset;
+                endIndex = startIndex + limit;
+                paginatedReports = filteredReports.slice(startIndex, endIndex);
+                res.json({
+                    success: true,
+                    data: {
+                        data: paginatedReports.map(transformReportForFrontend),
+                        total: total,
+                        page: page,
+                        limit: limit,
+                        totalPages: Math.ceil(total / limit)
+                    }
+                });
+                return [3 /*break*/, 8];
+            case 7:
+                error_29 = _a.sent();
+                console.error('Error fetching dashboard reports:', error_29);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch reports'
+                });
+                return [3 /*break*/, 8];
+            case 8: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/dashboard/stats', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var userReports, totalAmountLost, averageAmount, recentActivity, categoryBreakdown, stats, error_30;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, reportRepository.findReportsByReporterId(req.user.userId)];
+            case 1:
+                userReports = _a.sent();
+                totalAmountLost = userReports.reduce(function (sum, r) { return sum + (r.amount_lost || 0); }, 0);
+                averageAmount = userReports.length > 0 ? totalAmountLost / userReports.length : 0;
+                recentActivity = userReports
+                    .sort(function (a, b) { return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); })
+                    .slice(0, 5)
+                    .map(function (r) {
+                    var _a;
+                    return ({
+                        id: r.id,
+                        type: 'report',
+                        title: "".concat(r.category, " scam reported"),
+                        description: ((_a = r.narrative) === null || _a === void 0 ? void 0 : _a.substring(0, 100)) + '...',
+                        timestamp: r.created_at,
+                        status: r.status
+                    });
+                });
+                categoryBreakdown = userReports.reduce(function (acc, r) {
+                    var cat = r.category || 'unknown';
+                    acc[cat] = (acc[cat] || 0) + 1;
+                    return acc;
+                }, {});
+                stats = {
+                    totalReports: userReports.length,
+                    pendingReports: userReports.filter(function (r) { return r.status === 'pending'; }).length,
+                    approvedReports: userReports.filter(function (r) { return r.status === 'verified'; }).length,
+                    rejectedReports: userReports.filter(function (r) { return r.status === 'rejected'; }).length,
+                    totalAmountLost: totalAmountLost,
+                    averageAmount: Math.round(averageAmount * 100) / 100,
+                    recentActivity: recentActivity,
+                    categoryBreakdown: categoryBreakdown
+                };
+                res.json({
+                    success: true,
+                    data: stats
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_30 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch dashboard stats'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Moderation routes
+app.get('/api/moderation/queue', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var pendingReports, underReviewReports, verifiedReports, rejectedReports, allQueueReports, error_31;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 5, , 6]);
+                return [4 /*yield*/, reportRepository.findReportsByStatus('pending')];
+            case 1:
+                pendingReports = _a.sent();
+                return [4 /*yield*/, reportRepository.findReportsByStatus('under_review')];
+            case 2:
+                underReviewReports = _a.sent();
+                return [4 /*yield*/, reportRepository.findReportsByStatus('verified')];
+            case 3:
+                verifiedReports = _a.sent();
+                return [4 /*yield*/, reportRepository.findReportsByStatus('rejected')];
+            case 4:
+                rejectedReports = _a.sent();
+                allQueueReports = __spreadArray(__spreadArray([], pendingReports, true), underReviewReports, true);
+                res.json({
+                    success: true,
+                    data: {
+                        tasks: allQueueReports.map(function (report) { return ({
+                            id: report.id,
+                            type: 'report',
+                            itemId: report.id,
+                            priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                            status: report.status === 'under_review' ? 'under_review' : 'pending',
+                            title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                            riskScore: report.risk_score,
+                            createdAt: report.created_at,
+                            updatedAt: report.updated_at,
+                            assignedTo: report.status === 'under_review' ? req.user.userId : null, // Show as assigned if under review
+                            dueDate: null
+                        }); }),
+                        total: allQueueReports.length,
+                        stats: {
+                            pending: pendingReports.length,
+                            underReview: underReviewReports.length,
+                            requiresInfo: 0,
+                            escalated: 0,
+                            completed: verifiedReports.length + rejectedReports.length,
+                            total: pendingReports.length + underReviewReports.length + verifiedReports.length + rejectedReports.length,
+                            averageProcessingTime: 24,
+                            overdueTasks: 0
+                        }
+                    }
+                });
+                return [3 /*break*/, 6];
+            case 5:
+                error_31 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch moderation queue'
+                });
+                return [3 /*break*/, 6];
+            case 6: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/moderation/queue/:id', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, report, task, error_32;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                taskId = req.params.id;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                task = {
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                    status: 'pending',
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: report.updated_at,
+                    assignedTo: null,
+                    dueDate: null
+                };
+                res.json({
+                    success: true,
+                    data: task
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_32 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch moderation task'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/moderation/queue/:id/assign', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, moderatorId, report, task, error_33;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                taskId = req.params.id;
+                moderatorId = req.body.moderatorId;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                task = {
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                    status: 'under_review',
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: new Date().toISOString(),
+                    assignedTo: moderatorId,
+                    dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                };
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'under_review' })];
+            case 2:
+                _a.sent();
+                res.json({
+                    success: true,
+                    data: task
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_33 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to assign task'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/moderation/queue/:id/unassign', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, report, task, error_34;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                taskId = req.params.id;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                task = {
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                    status: 'pending',
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: new Date().toISOString(),
+                    assignedTo: null,
+                    dueDate: null
+                };
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'pending' })];
+            case 2:
+                _a.sent();
+                res.json({
+                    success: true,
+                    data: task
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_34 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to unassign task'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.patch('/api/moderation/queue/:id/status', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, _a, status_5, reason, report, task, error_35;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 6, , 7]);
+                taskId = req.params.id;
+                _a = req.body, status_5 = _a.status, reason = _a.reason;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _b.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                task = {
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                    status: status_5,
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: new Date().toISOString(),
+                    assignedTo: req.user.userId,
+                    dueDate: null
+                };
+                if (!(status_5 === 'completed')) return [3 /*break*/, 3];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'verified' })];
+            case 2:
+                _b.sent();
+                return [3 /*break*/, 5];
+            case 3:
+                if (!(status_5 === 'rejected')) return [3 /*break*/, 5];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'rejected' })];
+            case 4:
+                _b.sent();
+                _b.label = 5;
+            case 5:
+                res.json({
+                    success: true,
+                    data: task
+                });
+                return [3 /*break*/, 7];
+            case 6:
+                error_35 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to update task status'
+                });
+                return [3 /*break*/, 7];
+            case 7: return [2 /*return*/];
+        }
+    });
+}); });
+app.patch('/api/moderation/queue/:id/priority', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, _a, priority, reason, report, task, error_36;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                taskId = req.params.id;
+                _a = req.body, priority = _a.priority, reason = _a.reason;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _b.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                task = {
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: priority,
+                    status: 'pending',
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: new Date().toISOString(),
+                    assignedTo: null,
+                    dueDate: null
+                };
+                res.json({
+                    success: true,
+                    data: task
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_36 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to update task priority'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/moderation/queue/:id/decide', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, _a, decision, reason, notes, actionData, report, newStatus, task, error_37;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 10, , 11]);
+                taskId = req.params.id;
+                _a = req.body, decision = _a.decision, reason = _a.reason, notes = _a.notes, actionData = _a.actionData;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _b.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                newStatus = 'pending';
+                if (decision === 'approve') {
+                    newStatus = 'verified';
+                }
+                else if (decision === 'reject') {
+                    newStatus = 'rejected';
+                }
+                else if (decision === 'escalate') {
+                    newStatus = 'under_review';
+                }
+                else if (decision === 'require_info') {
+                    newStatus = 'requires_more_info';
+                }
+                task = {
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                    status: newStatus,
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: new Date().toISOString(),
+                    assignedTo: req.user.userId,
+                    dueDate: null
+                };
+                if (!(decision === 'approve')) return [3 /*break*/, 3];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'verified' })];
+            case 2:
+                _b.sent();
+                return [3 /*break*/, 9];
+            case 3:
+                if (!(decision === 'reject')) return [3 /*break*/, 5];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'rejected' })];
+            case 4:
+                _b.sent();
+                return [3 /*break*/, 9];
+            case 5:
+                if (!(decision === 'escalate')) return [3 /*break*/, 7];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'under_review' })];
+            case 6:
+                _b.sent();
+                return [3 /*break*/, 9];
+            case 7:
+                if (!(decision === 'require_info')) return [3 /*break*/, 9];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: 'requires_more_info' })];
+            case 8:
+                _b.sent();
+                _b.label = 9;
+            case 9:
+                res.json({
+                    success: true,
+                    data: {
+                        task: task,
+                        decision: {
+                            decision: decision,
+                            reason: reason,
+                            notes: notes,
+                            actionData: actionData,
+                            moderatorId: req.user.userId,
+                            timestamp: new Date().toISOString()
+                        }
+                    }
+                });
+                return [3 /*break*/, 11];
+            case 10:
+                error_37 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to make decision'
+                });
+                return [3 /*break*/, 11];
+            case 11: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/moderation/assigned', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var moderatorId_1, assignedReports, assignedTasks, error_38;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                moderatorId_1 = req.query.moderatorId || req.user.userId;
+                return [4 /*yield*/, reportRepository.findReportsByStatus('under_review')];
+            case 1:
+                assignedReports = _a.sent();
+                assignedTasks = assignedReports.map(function (report) { return ({
+                    id: report.id,
+                    type: 'report',
+                    itemId: report.id,
+                    priority: report.risk_score > 80 ? 'high' : report.risk_score > 60 ? 'medium' : 'low',
+                    status: 'under_review',
+                    title: "".concat(report.category, " scam - ").concat(report.identifier_value),
+                    riskScore: report.risk_score,
+                    createdAt: report.created_at,
+                    updatedAt: report.updated_at,
+                    assignedTo: moderatorId_1,
+                    dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                }); });
+                res.json({
+                    success: true,
+                    data: assignedTasks
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_38 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch assigned tasks'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/moderation/overdue', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var overdueTasks, error_39;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, userRepository.findOverdueTasksByModeratorId(req.user.userId)];
+            case 1:
+                overdueTasks = _a.sent();
+                res.json({
+                    success: true,
+                    data: overdueTasks
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_39 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch overdue tasks'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/moderation/analytics', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var timeframe, totalReports, pendingReports, verifiedReports, rejectedReports, analytics, error_40;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 5, , 6]);
+                timeframe = req.query.timeframe || 'month';
+                return [4 /*yield*/, reportRepository.countReports()];
+            case 1:
+                totalReports = _a.sent();
+                return [4 /*yield*/, reportRepository.countReportsByStatus('pending')];
+            case 2:
+                pendingReports = _a.sent();
+                return [4 /*yield*/, reportRepository.countReportsByStatus('verified')];
+            case 3:
+                verifiedReports = _a.sent();
+                return [4 /*yield*/, reportRepository.countReportsByStatus('rejected')];
+            case 4:
+                rejectedReports = _a.sent();
+                analytics = {
+                    totalDecisions: totalReports,
+                    decisionsByType: {
+                        pending: pendingReports,
+                        verified: verifiedReports,
+                        rejected: rejectedReports
+                    },
+                    decisionsByItemType: {
+                        report: totalReports
+                    },
+                    averageDecisionTime: 24,
+                    escalationRate: 0.1,
+                    topModerators: [
+                        {
+                            moderatorId: 'admin1',
+                            decisions: totalReports,
+                            averageTime: 24
+                        }
+                    ]
+                };
+                res.json({
+                    success: true,
+                    data: analytics
+                });
+                return [3 /*break*/, 6];
+            case 5:
+                error_40 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch moderation analytics'
+                });
+                return [3 /*break*/, 6];
+            case 6: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/moderation/moderator-stats', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var moderatorId, timeframe, stats;
+    return __generator(this, function (_a) {
+        try {
+            moderatorId = req.query.moderatorId || req.user.userId;
+            timeframe = req.query.timeframe || 'month';
+            stats = {
+                totalDecisions: 0,
+                averageDecisionTime: 0,
+                accuracy: 0.95,
+                efficiency: 0.88
+            };
+            res.json({
+                success: true,
+                data: stats
+            });
+        }
+        catch (error) {
+            res.status(500).json({
+                success: false,
+                error: 'Failed to fetch moderator stats'
+            });
+        }
+        return [2 /*return*/];
+    });
+}); });
+app.get('/api/moderation/queue/:id/history', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var taskId, report, history_2, error_41;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                taskId = req.params.id;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _a.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.findDecisionHistoryByTaskId(taskId)];
+            case 2:
+                history_2 = _a.sent();
+                res.json({
+                    success: true,
+                    data: history_2
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_41 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch decision history'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/moderation/bulk-update', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, taskIds, action, data, updatedTasks, error_42;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                _a = req.body, taskIds = _a.taskIds, action = _a.action, data = _a.data;
+                if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Task IDs are required'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.bulkUpdateTasks(taskIds, action, data)];
+            case 1:
+                updatedTasks = _b.sent();
+                res.json({
+                    success: true,
+                    data: {
+                        message: "Updated ".concat(taskIds.length, " tasks"),
+                        updatedTasks: updatedTasks
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_42 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to perform bulk update'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Bulk update tasks endpoint
+app.patch('/api/moderation/queue/bulk', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, taskIds, updates, updatedCount, _i, taskIds_1, taskId, error_43, error_44;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 8, , 9]);
+                _a = req.body, taskIds = _a.taskIds, updates = _a.updates;
+                if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Task IDs are required'
+                        })];
+                }
+                updatedCount = 0;
+                _i = 0, taskIds_1 = taskIds;
+                _b.label = 1;
+            case 1:
+                if (!(_i < taskIds_1.length)) return [3 /*break*/, 7];
+                taskId = taskIds_1[_i];
+                _b.label = 2;
+            case 2:
+                _b.trys.push([2, 5, , 6]);
+                if (!updates.status) return [3 /*break*/, 4];
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: updates.status })];
+            case 3:
+                _b.sent();
+                _b.label = 4;
+            case 4:
+                updatedCount++;
+                return [3 /*break*/, 6];
+            case 5:
+                error_43 = _b.sent();
+                console.error("Failed to update task ".concat(taskId, ":"), error_43);
+                return [3 /*break*/, 6];
+            case 6:
+                _i++;
+                return [3 /*break*/, 1];
+            case 7:
+                res.json({
+                    success: true,
+                    data: { updatedCount: updatedCount }
+                });
+                return [3 /*break*/, 9];
+            case 8:
+                error_44 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to bulk update tasks'
+                });
+                return [3 /*break*/, 9];
+            case 9: return [2 /*return*/];
+        }
+    });
+}); });
+// Moderation decisions endpoint
+app.post('/api/moderation/decisions', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, taskId, decision, reason, notes, actionData, report, newStatus, error_45;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 3, , 4]);
+                _a = req.body, taskId = _a.taskId, decision = _a.decision, reason = _a.reason, notes = _a.notes, actionData = _a.actionData;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 1:
+                report = _b.sent();
+                if (!report) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'Task not found'
+                        })];
+                }
+                newStatus = 'pending';
+                if (decision === 'approve') {
+                    newStatus = 'verified';
+                }
+                else if (decision === 'reject') {
+                    newStatus = 'rejected';
+                }
+                else if (decision === 'escalate') {
+                    newStatus = 'under_review';
+                }
+                else if (decision === 'require_info') {
+                    newStatus = 'requires_more_info';
+                }
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: newStatus })];
+            case 2:
+                _b.sent();
+                res.json({
+                    success: true,
+                    data: {
+                        success: true,
+                        actionTaken: "Report ".concat(decision, "d"),
+                        updatedItem: {
+                            id: report.id,
+                            status: newStatus,
+                            decision: decision,
+                            reason: reason,
+                            notes: notes,
+                            moderatorId: req.user.userId,
+                            timestamp: new Date().toISOString()
+                        }
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_45 = _b.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to record decision'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// Bulk make decisions endpoint
+app.post('/api/moderation/decisions/bulk', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var decisions, results, successful, failed, _i, decisions_1, decisionData, taskId, decision, reason, notes, actionData, report, newStatus, error_46, error_47;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 8, , 9]);
+                decisions = req.body.decisions;
+                if (!decisions || !Array.isArray(decisions) || decisions.length === 0) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Decisions array is required'
+                        })];
+                }
+                results = [];
+                successful = 0;
+                failed = 0;
+                _i = 0, decisions_1 = decisions;
+                _a.label = 1;
+            case 1:
+                if (!(_i < decisions_1.length)) return [3 /*break*/, 7];
+                decisionData = decisions_1[_i];
+                _a.label = 2;
+            case 2:
+                _a.trys.push([2, 5, , 6]);
+                taskId = decisionData.taskId, decision = decisionData.decision, reason = decisionData.reason, notes = decisionData.notes, actionData = decisionData.actionData;
+                return [4 /*yield*/, reportRepository.findById(taskId)];
+            case 3:
+                report = _a.sent();
+                if (!report) {
+                    results.push({
+                        taskId: taskId,
+                        success: false,
+                        error: 'Task not found'
+                    });
+                    failed++;
+                    return [3 /*break*/, 6];
+                }
+                newStatus = 'pending';
+                if (decision === 'approve') {
+                    newStatus = 'verified';
+                }
+                else if (decision === 'reject') {
+                    newStatus = 'rejected';
+                }
+                else if (decision === 'escalate') {
+                    newStatus = 'under_review';
+                }
+                else if (decision === 'require_info') {
+                    newStatus = 'requires_more_info';
+                }
+                return [4 /*yield*/, reportRepository.updateReport(taskId, { status: newStatus })];
+            case 4:
+                _a.sent();
+                results.push({
+                    taskId: taskId,
+                    success: true,
+                    actionTaken: "Report ".concat(decision, "d")
+                });
+                successful++;
+                return [3 /*break*/, 6];
+            case 5:
+                error_46 = _a.sent();
+                results.push({
+                    taskId: decisionData.taskId,
+                    success: false,
+                    error: error_46.message
+                });
+                failed++;
+                return [3 /*break*/, 6];
+            case 6:
+                _i++;
+                return [3 /*break*/, 1];
+            case 7:
+                res.json({
+                    success: true,
+                    data: {
+                        successful: successful,
+                        failed: failed,
+                        results: results
+                    }
+                });
+                return [3 /*break*/, 9];
+            case 8:
+                error_47 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to process bulk decisions'
+                });
+                return [3 /*break*/, 9];
+            case 9: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/moderation/stats', authMiddleware, adminMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var pending, underReview, verified, rejected, total, stats, error_48;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 6, , 7]);
+                return [4 /*yield*/, reportRepository.countReportsByStatus('pending')];
+            case 1:
+                pending = _a.sent();
+                return [4 /*yield*/, reportRepository.countReportsByStatus('under_review')];
+            case 2:
+                underReview = _a.sent();
+                return [4 /*yield*/, reportRepository.countReportsByStatus('verified')];
+            case 3:
+                verified = _a.sent();
+                return [4 /*yield*/, reportRepository.countReportsByStatus('rejected')];
+            case 4:
+                rejected = _a.sent();
+                return [4 /*yield*/, reportRepository.countReports()];
+            case 5:
+                total = _a.sent();
+                stats = {
+                    pending: pending,
+                    underReview: underReview,
+                    requiresInfo: 0,
+                    escalated: 0,
+                    completed: verified + rejected,
+                    total: total,
+                    averageProcessingTime: 24,
+                    overdueTasks: 0
+                };
+                res.json({
+                    success: true,
+                    data: stats
+                });
+                return [3 /*break*/, 7];
+            case 6:
+                error_48 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch moderation stats'
+                });
+                return [3 /*break*/, 7];
+            case 7: return [2 /*return*/];
+        }
+    });
+}); });
+// Entity routes
+app.get('/api/entities', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var page, limit, status_6, search_2, offset, reports, entities, filteredEntities, paginatedEntities, error_49;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                page = parseInt(req.query.page) || 1;
+                limit = Math.min(parseInt(req.query.limit) || 20, 100);
+                status_6 = req.query.status;
+                search_2 = req.query.search;
+                offset = (page - 1) * limit;
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                reports = _a.sent();
+                entities = reports.map(function (report) { return ({
+                    id: "entity_".concat(report.id),
+                    displayName: report.identifier_value,
+                    riskScore: report.risk_score || 0,
+                    status: report.status === 'verified' ? 'confirmed' :
+                        report.status === 'rejected' ? 'cleared' :
+                            report.status === 'under_review' ? 'disputed' : 'alleged',
+                    reportCount: 1,
+                    totalAmountLost: report.amount_lost || 0,
+                    tags: [report.category, report.identifier_type],
+                    createdAt: report.created_at,
+                    updatedAt: report.updated_at
+                }); });
+                filteredEntities = entities;
+                if (status_6 && status_6 !== 'all') {
+                    filteredEntities = filteredEntities.filter(function (e) { return e.status === status_6; });
+                }
+                if (search_2) {
+                    filteredEntities = filteredEntities.filter(function (e) {
+                        var _a, _b;
+                        return ((_a = e.displayName) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(search_2.toLowerCase())) ||
+                            ((_b = e.tags) === null || _b === void 0 ? void 0 : _b.some(function (tag) { return tag.toLowerCase().includes(search_2.toLowerCase()); }));
+                    });
+                }
+                filteredEntities.sort(function (a, b) { return b.riskScore - a.riskScore; });
+                paginatedEntities = filteredEntities.slice(offset, offset + limit);
+                res.json({
+                    success: true,
+                    data: {
+                        data: paginatedEntities,
+                        total: filteredEntities.length,
+                        page: page,
+                        limit: limit,
+                        totalPages: Math.ceil(filteredEntities.length / limit)
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_49 = _a.sent();
+                console.error('Error fetching entities:', error_49);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch entities'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.get('/api/entities/stats', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var entities, entitiesWithCounts, stats, error_50;
+    var _this = this;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                return [4 /*yield*/, reportRepository.findAllReports()];
+            case 1:
+                entities = _a.sent();
+                return [4 /*yield*/, Promise.all(entities.map(function (report) { return __awaiter(_this, void 0, void 0, function () {
+                        var reportCount, totalAmountLost;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0: return [4 /*yield*/, reportRepository.countReportsByStatus('verified', report.id)];
+                                case 1:
+                                    reportCount = _a.sent();
+                                    return [4 /*yield*/, reportRepository.sumAmountLostByReportId(report.id)];
+                                case 2:
+                                    totalAmountLost = _a.sent();
+                                    return [2 /*return*/, {
+                                            id: "entity_".concat(report.id),
+                                            displayName: report.identifier_value,
+                                            riskScore: report.risk_score || 0,
+                                            status: report.status === 'verified' ? 'confirmed' :
+                                                report.status === 'rejected' ? 'cleared' :
+                                                    report.status === 'under_review' ? 'disputed' : 'alleged',
+                                            reportCount: reportCount,
+                                            totalAmountLost: totalAmountLost,
+                                            tags: [report.category, report.identifier_type],
+                                            createdAt: report.created_at,
+                                            updatedAt: report.updated_at
+                                        }];
+                            }
+                        });
+                    }); }))];
+            case 2:
+                entitiesWithCounts = _a.sent();
+                stats = {
+                    totalEntities: entitiesWithCounts.length,
+                    highRisk: entitiesWithCounts.filter(function (e) { return e.riskScore >= 80; }).length,
+                    underReview: entitiesWithCounts.filter(function (e) { return e.status === 'disputed'; }).length,
+                    communityReports: entitiesWithCounts.reduce(function (sum, e) { return sum + e.reportCount; }, 0)
+                };
+                res.json({
+                    success: true,
+                    data: stats
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_50 = _a.sent();
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch entity stats'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// Error handling middleware
+app.use(function (err, req, res, next) {
+    console.error('Error:', err);
+    res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+    });
+});
+app.use(function (error, req, res, next) {
+    if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'File size exceeds 15MB limit' }
+            });
+        }
+        if (error.code === 'LIMIT_FILE_COUNT') {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'Too many files. Maximum 10 files allowed.' }
+            });
+        }
+        return res.status(400).json({
+            success: false,
+            error: { message: "Upload error: ".concat(error.message) }
+        });
+    }
+    if (error.message && error.message.includes('Invalid file type')) {
+        return res.status(400).json({
+            success: false,
+            error: { message: error.message }
+        });
+    }
+    next(error);
+});
+// Profile image upload endpoint
+app.post('/api/profile/upload-image', authMiddleware, profileUpload.single('profileImage'), function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var userId, imagePath, updatedUser, error_51;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                if (!req.file) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'No image file provided'
+                        })];
+                }
+                userId = req.user.userId;
+                imagePath = "/uploads/profile/".concat(req.file.filename);
+                return [4 /*yield*/, userRepository.updateUser(userId, { profileImage: imagePath })];
+            case 1:
+                updatedUser = _a.sent();
+                if (!updatedUser) {
+                    return [2 /*return*/, res.status(500).json({
+                            success: false,
+                            error: 'Failed to update profile image'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: {
+                        profileImage: imagePath
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_51 = _a.sent();
+                console.error('Error uploading profile image:', error_51);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to upload profile image'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Comments endpoints
+app.get('/api/reports/:id/comments', function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, _a, _b, page, _c, limit, userId, comments, error_52;
+    var _d;
+    return __generator(this, function (_e) {
+        switch (_e.label) {
+            case 0:
+                _e.trys.push([0, 2, , 3]);
+                id = req.params.id;
+                _a = req.query, _b = _a.page, page = _b === void 0 ? 1 : _b, _c = _a.limit, limit = _c === void 0 ? 20 : _c;
+                userId = ((_d = req.user) === null || _d === void 0 ? void 0 : _d.userId) || null // Optional user ID for reactions
+                ;
+                return [4 /*yield*/, reportRepository.getComments(id, parseInt(page), parseInt(limit), userId)];
+            case 1:
+                comments = _e.sent();
+                res.json({
+                    success: true,
+                    data: comments
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_52 = _e.sent();
+                console.error('Get comments error:', error_52);
+                res.status(500).json({ success: false, error: 'Failed to fetch comments' });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/reports/:id/comments', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, _a, content, parentId, userId, comment, error_53;
+    var _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                _c.trys.push([0, 2, , 3]);
+                id = req.params.id;
+                _a = req.body, content = _a.content, parentId = _a.parentId;
+                userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.userId;
+                if (!content || !userId) {
+                    return [2 /*return*/, res.status(400).json({ success: false, error: 'Content and user ID are required' })];
+                }
+                return [4 /*yield*/, reportRepository.addComment(id, userId, content, parentId)];
+            case 1:
+                comment = _c.sent();
+                res.json({
+                    success: true,
+                    data: comment
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_53 = _c.sent();
+                console.error('Add comment error:', error_53);
+                res.status(500).json({ success: false, error: 'Failed to add comment' });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/comments/:id/reactions', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, type, userId, reaction, error_54;
+    var _a;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                id = req.params.id;
+                type = req.body // 'like', 'love', 'support'
+                .type;
+                userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                if (!type || !userId) {
+                    return [2 /*return*/, res.status(400).json({ success: false, error: 'Reaction type and user ID are required' })];
+                }
+                return [4 /*yield*/, reportRepository.toggleReaction(id, userId, type)];
+            case 1:
+                reaction = _b.sent();
+                res.json({
+                    success: true,
+                    data: reaction
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_54 = _b.sent();
+                console.error('Toggle reaction error:', error_54);
+                res.status(500).json({ success: false, error: 'Failed to toggle reaction' });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// User management endpoints (Admin only)
+app.get('/api/admin/users', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var page, limit, result, error_55;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                // Only allow admins to access user management
+                if (req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied. Admin privileges required.'
+                        })];
+                }
+                page = parseInt(req.query.page) || 1;
+                limit = Math.min(parseInt(req.query.limit) || 20, 100);
+                return [4 /*yield*/, userRepository.getAllUsers(page, limit)];
+            case 1:
+                result = _a.sent();
+                res.json({
+                    success: true,
+                    data: {
+                        users: result.users.map(function (user) { return ({
+                            id: user.id,
+                            email: user.email,
+                            role: user.role,
+                            name: user.name,
+                            phone: user.phone,
+                            isVerified: user.is_verified,
+                            profileImage: user.profile_image,
+                            createdAt: user.created_at,
+                            updatedAt: user.updated_at
+                        }); }),
+                        total: result.total,
+                        page: page,
+                        limit: limit,
+                        totalPages: Math.ceil(result.total / limit)
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_55 = _a.sent();
+                console.error('Error fetching users:', error_55);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to fetch users'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+app.post('/api/admin/users', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, email, password, role, name_2, phone, existingUser, newUser, error_56;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 3, , 4]);
+                // Only allow admins to create users
+                if (req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied. Admin privileges required.'
+                        })];
+                }
+                _a = req.body, email = _a.email, password = _a.password, role = _a.role, name_2 = _a.name, phone = _a.phone;
+                // Validation
+                if (!email || !password) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Email and password are required'
+                        })];
+                }
+                if (!['member', 'moderator', 'admin'].includes(role)) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Invalid role. Must be member, moderator, or admin'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.findByEmail(email)];
+            case 1:
+                existingUser = _b.sent();
+                if (existingUser) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'User with this email already exists'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.createUser({
+                        email: email,
+                        password: password,
+                        role: role || 'member',
+                        name: name_2,
+                        phone: phone
+                    })];
+            case 2:
+                newUser = _b.sent();
+                res.status(201).json({
+                    success: true,
+                    data: {
+                        id: newUser.id,
+                        email: newUser.email,
+                        role: newUser.role,
+                        name: newUser.name,
+                        phone: newUser.phone,
+                        isVerified: newUser.is_verified,
+                        createdAt: newUser.created_at
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_56 = _b.sent();
+                console.error('Error creating user:', error_56);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to create user'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.put('/api/admin/users/:id', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, updateData, existingUser, updatedUser, error_57;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                // Only allow admins to update users
+                if (req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied. Admin privileges required.'
+                        })];
+                }
+                id = req.params.id;
+                updateData = req.body;
+                return [4 /*yield*/, userRepository.findById(id)];
+            case 1:
+                existingUser = _a.sent();
+                if (!existingUser) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'User not found'
+                        })];
+                }
+                // Validate role if provided
+                if (updateData.role && !['member', 'moderator', 'admin'].includes(updateData.role)) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Invalid role. Must be member, moderator, or admin'
+                        })];
+                }
+                // Hash password if provided
+                if (updateData.password) {
+                    updateData.password = bcrypt.hashSync(updateData.password, 10);
+                }
+                return [4 /*yield*/, userRepository.updateUser(id, updateData)];
+            case 2:
+                updatedUser = _a.sent();
+                if (!updatedUser) {
+                    return [2 /*return*/, res.status(500).json({
+                            success: false,
+                            error: 'Failed to update user'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: {
+                        id: updatedUser.id,
+                        email: updatedUser.email,
+                        role: updatedUser.role,
+                        name: updatedUser.name,
+                        phone: updatedUser.phone,
+                        isVerified: updatedUser.is_verified,
+                        updatedAt: updatedUser.updated_at
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_57 = _a.sent();
+                console.error('Error updating user:', error_57);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to update user'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+app.delete('/api/admin/users/:id', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var id, existingUser, deleted, error_58;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                // Only allow admins to delete users
+                if (req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Access denied. Admin privileges required.'
+                        })];
+                }
+                id = req.params.id;
+                // Prevent admin from deleting themselves
+                if (id === req.user.userId) {
+                    return [2 /*return*/, res.status(400).json({
+                            success: false,
+                            error: 'Cannot delete your own account'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.findById(id)];
+            case 1:
+                existingUser = _a.sent();
+                if (!existingUser) {
+                    return [2 /*return*/, res.status(404).json({
+                            success: false,
+                            error: 'User not found'
+                        })];
+                }
+                return [4 /*yield*/, userRepository.deleteUser(id)];
+            case 2:
+                deleted = _a.sent();
+                if (!deleted) {
+                    return [2 /*return*/, res.status(500).json({
+                            success: false,
+                            error: 'Failed to delete user'
+                        })];
+                }
+                res.json({
+                    success: true,
+                    data: {
+                        message: 'User deleted successfully'
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_58 = _a.sent();
+                console.error('Error deleting user:', error_58);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to delete user'
+                });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+// 404 handler
+app.use('*', function (req, res) {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found'
+    });
+});
+// Forex rates management endpoints
+app.get('/api/forex/status', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var cacheInfo;
+    return __generator(this, function (_a) {
+        try {
+            cacheInfo = forexService.getCacheInfo();
+            res.json({
+                success: true,
+                data: cacheInfo
+            });
+        }
+        catch (error) {
+            console.error('Error getting forex status:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to get forex status'
+            });
+        }
+        return [2 /*return*/];
+    });
+}); });
+app.post('/api/forex/refresh', authMiddleware, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+    var newRates, error_59;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                // Only allow admins to manually refresh rates
+                if (req.user.role !== 'admin') {
+                    return [2 /*return*/, res.status(403).json({
+                            success: false,
+                            error: 'Only admins can refresh forex rates'
+                        })];
+                }
+                return [4 /*yield*/, forexService.refreshRates()];
+            case 1:
+                newRates = _a.sent();
+                res.json({
+                    success: true,
+                    data: {
+                        message: 'Forex rates refreshed successfully',
+                        rates: newRates
+                    }
+                });
+                return [3 /*break*/, 3];
+            case 2:
+                error_59 = _a.sent();
+                console.error('Error refreshing forex rates:', error_59);
+                res.status(500).json({
+                    success: false,
+                    error: 'Failed to refresh forex rates'
+                });
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+// Start server
+app.listen(PORT, function () {
+    console.log("\uD83D\uDE80 Server running on http://localhost:".concat(PORT));
+    console.log("\uD83D\uDCCA Dashboard: http://localhost:3000");
+    console.log("\uD83D\uDD27 Environment: ".concat(process.env.NODE_ENV || 'development'));
+});
+module.exports = app;

@@ -5,6 +5,7 @@ export interface User {
   phoneNumber?: string
   role: 'user' | 'moderator' | 'admin'
   isVerified: boolean
+  profileImage?: string
   createdAt: string
   lastLogin?: string
 }
@@ -76,17 +77,27 @@ export interface ModerationTask {
 
 export interface Comment {
   id: string
-  content: string
+  reportId: string
   userId: string
+  userEmail: string
+  userName?: string
+  userProfileImage?: string
+  content: string
   parentId?: string
-  entityId?: string
-  reportId?: string
-  status: 'active' | 'hidden' | 'flagged'
-  upvotes: number
-  downvotes: number
-  flagsCount: number
   createdAt: string
   updatedAt: string
+  reactions: {
+    like: number
+    love: number
+    support: number
+  }
+  userReactions: {
+    like: boolean
+    love: boolean
+    support: boolean
+  }
+  replies?: Comment[]
+  replyCount?: number
 }
 
 export interface ReportStats {
@@ -96,6 +107,7 @@ export interface ReportStats {
   rejectedReports: number
   totalAmountLost: number
   averageAmount: number
+  totalUsers: number
   recentActivity: Array<{
     id: string
     type: string
@@ -105,6 +117,15 @@ export interface ReportStats {
     status: string
   }>
   categoryBreakdown: Record<string, number>
+  currencyBreakdown: Record<string, { count: number, totalAmount: number }>
+}
+
+export interface Reaction {
+  id: string
+  commentId: string
+  userId: string
+  type: 'like' | 'love' | 'support'
+  createdAt: string
 }
 
 // API Response types

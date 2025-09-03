@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Search, 
   Filter, 
@@ -24,6 +25,7 @@ import { formatRelativeTime, formatRiskScore } from '@/lib/utils'
 import { SearchFilters, SearchResult } from '@/types'
 
 export default function SearchPage() {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [filters, setFilters] = useState<SearchFilters>({})
@@ -64,6 +66,11 @@ export default function SearchPage() {
   const handleSearch = (searchQuery: string) => {
     setQuery(searchQuery)
     setPage(1)
+  }
+
+  const handleCardClick = (result: SearchResult) => {
+    // Navigate to the report details page
+    router.push(result.url)
   }
 
   const handleFilterChange = (newFilters: Partial<SearchFilters>) => {
@@ -320,7 +327,11 @@ export default function SearchPage() {
                 const riskInfo = riskScore ? formatRiskScore(riskScore) : null
 
                 return (
-                  <Card key={result.id} className="hover:shadow-md transition-shadow">
+                  <Card 
+                    key={result.id} 
+                    className="hover:shadow-md transition-shadow cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleCardClick(result)}
+                  >
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -358,16 +369,8 @@ export default function SearchPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Share2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center ml-4">
+                          <ExternalLink className="h-4 w-4 text-gray-400" />
                         </div>
                       </div>
                     </CardContent>

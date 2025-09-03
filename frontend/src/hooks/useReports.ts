@@ -24,6 +24,16 @@ export const useReport = (id: string) => {
   })
 }
 
+// Get detailed report by ID - for comprehensive report view
+export const useDetailedReport = (id: string) => {
+  return useQuery({
+    queryKey: ['detailed-report', id],
+    queryFn: () => ReportService.getDetailedById(id),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
 // Get report statistics
 export const useReportStats = (timeframe?: string) => {
   return useQuery({
@@ -55,19 +65,7 @@ export const useCreateReport = () => {
   })
 }
 
-// Update report
-export const useUpdateReport = () => {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Report> }) => 
-      ReportService.update(id, data),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['report', id] })
-      queryClient.invalidateQueries({ queryKey: ['reports'] })
-    },
-  })
-}
+
 
 // Update report status
 export const useUpdateReportStatus = () => {
@@ -85,6 +83,29 @@ export const useUpdateReportStatus = () => {
     }) => ReportService.updateStatus(id, status, notes),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['report', id] })
+      queryClient.invalidateQueries({ queryKey: ['report-history', id] })
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+      queryClient.invalidateQueries({ queryKey: ['report-stats'] })
+    },
+  })
+}
+
+// Update report
+export const useUpdateReport = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ 
+      id, 
+      data 
+    }: { 
+      id: string; 
+      data: Partial<Report> 
+    }) => ReportService.update(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['report', id] })
+      queryClient.invalidateQueries({ queryKey: ['detailed-report', id] })
+      queryClient.invalidateQueries({ queryKey: ['report-history', id] })
       queryClient.invalidateQueries({ queryKey: ['reports'] })
       queryClient.invalidateQueries({ queryKey: ['report-stats'] })
     },
@@ -123,6 +144,15 @@ export const useReportEvidence = (id: string) => {
   return useQuery({
     queryKey: ['report-evidence', id],
     queryFn: () => ReportService.getEvidence(id),
+    enabled: !!id,
+  })
+}
+
+// Get report history
+export const useReportHistory = (id: string) => {
+  return useQuery({
+    queryKey: ['report-history', id],
+    queryFn: () => ReportService.getHistory(id),
     enabled: !!id,
   })
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -12,7 +13,7 @@ import {
   BarChart3,
   Clock,
   CheckCircle,
-  Eye
+  ExternalLink
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import { ReportStats } from '@/types'
 import Link from 'next/link'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const { user } = useAuthStore()
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d')
 
@@ -48,6 +50,18 @@ export default function DashboardPage() {
     }>,
     categoryBreakdown: {} as Record<string, number>
   }) as ReportStats
+
+  // Ensure numeric values are valid
+  const safeStats = {
+    ...stats,
+    totalReports: Number(stats.totalReports) || 0,
+    pendingReports: Number(stats.pendingReports) || 0,
+    approvedReports: Number(stats.approvedReports) || 0,
+    rejectedReports: Number(stats.rejectedReports) || 0,
+    totalAmountLost: Number(stats.totalAmountLost) || 0,
+    averageAmount: Number(stats.averageAmount) || 0,
+    totalUsers: Number(stats.totalUsers) || 0
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -80,6 +94,10 @@ export default function DashboardPage() {
       default:
         return <FileText className="h-4 w-4" />
     }
+  }
+
+  const handleReportClick = (reportId: string) => {
+    router.push(`/dashboard/reports/${reportId}`)
   }
 
   return (
@@ -132,15 +150,15 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '...' : stats.totalReports.toLocaleString()}
+              {statsLoading ? '...' : safeStats.totalReports.toLocaleString()}
             </div>
-                          <p className="text-xs text-muted-foreground flex items-center">
-                <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-                {stats.totalReports > 0 ? 
-                  `${stats.totalReports} total reports` :
-                  'No reports yet'
-                }
-              </p>
+            <p className="text-xs text-muted-foreground flex items-center">
+              <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
+              {safeStats.totalReports > 0 ? 
+                `${safeStats.totalReports} total reports` :
+                'No reports yet'
+              }
+            </p>
           </CardContent>
         </Card>
 
@@ -151,11 +169,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '...' : stats.approvedReports.toLocaleString()}
+              {statsLoading ? '...' : safeStats.approvedReports.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalReports > 0 ? 
-                `${Math.round((stats.approvedReports / stats.totalReports) * 100)}% verification rate` :
+              {safeStats.totalReports > 0 ? 
+                `${Math.round((safeStats.approvedReports / safeStats.totalReports) * 100)}% verification rate` :
                 'No reports yet'
               }
             </p>
@@ -169,7 +187,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '...' : formatCurrency(stats.totalAmountLost, 'INR')}
+              {statsLoading ? '...' : formatCurrency(safeStats.totalAmountLost, 'INR')}
             </div>
             <p className="text-xs text-muted-foreground">
               Estimated potential losses prevented
@@ -179,15 +197,15 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {statsLoading ? '...' : stats.pendingReports.toLocaleString()}
+              {statsLoading ? '...' : safeStats.totalUsers.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              Reports under review
+              Registered users on platform
             </p>
           </CardContent>
         </Card>
@@ -224,16 +242,20 @@ export default function DashboardPage() {
                 </div>
               ) : recentReports.length > 0 ? (
                 <div className="space-y-4">
-                                     {recentReports.map((report: any) => (
-                    <div key={report.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                  {recentReports.map((report: any) => (
+                    <div 
+                      key={report.id} 
+                      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => handleReportClick(report.id)}
+                    >
                       <div className="flex items-center space-x-3">
                         <div className="p-2 rounded-full bg-muted">
                           {getCategoryIcon(report.category)}
                         </div>
                         <div>
-                                                     <h4 className="font-medium text-foreground">
-                             {`${report.category} Report #${report.id}`}
-                           </h4>
+                          <h4 className="font-medium text-foreground">
+                            {`${report.category} Report #${report.id.slice(0, 8)}...`}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
                             {report.category} • {formatRelativeTime(report.createdAt)}
                           </p>
@@ -243,11 +265,7 @@ export default function DashboardPage() {
                         <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(report.status)}`}>
                           {report.status.replace('_', ' ')}
                         </span>
-                        <Link href={`/dashboard/reports/${report.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <ExternalLink className="h-4 w-4 text-gray-400" />
                       </div>
                     </div>
                   ))}

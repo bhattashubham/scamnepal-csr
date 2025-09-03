@@ -9,6 +9,7 @@ export interface User {
   name?: string
   phone?: string
   is_verified: boolean
+  profile_image?: string
   created_at: Date
   updated_at: Date
 }
@@ -27,7 +28,8 @@ export interface UpdateUserData {
   role?: 'member' | 'moderator' | 'admin'
   name?: string
   phone?: string
-  is_verified?: boolean
+  isVerified?: boolean
+  profileImage?: string
 }
 
 export class UserRepository extends BaseRepository<User> {
@@ -68,50 +70,6 @@ export class UserRepository extends BaseRepository<User> {
       [role]
     )
     return result.rows
-  }
-
-  // Update user data
-  async updateUser(id: string, userData: UpdateUserData): Promise<User | null> {
-    const fields: string[] = []
-    const values: any[] = []
-    
-    if (userData.email !== undefined) {
-      fields.push('email')
-      values.push(userData.email)
-    }
-    
-    if (userData.password !== undefined) {
-      const saltRounds = 12
-      const passwordHash = await bcrypt.hash(userData.password, saltRounds)
-      fields.push('password_hash')
-      values.push(passwordHash)
-    }
-    
-    if (userData.role !== undefined) {
-      fields.push('role')
-      values.push(userData.role)
-    }
-    
-    if (userData.name !== undefined) {
-      fields.push('name')
-      values.push(userData.name)
-    }
-    
-    if (userData.phone !== undefined) {
-      fields.push('phone')
-      values.push(userData.phone)
-    }
-    
-    if (userData.is_verified !== undefined) {
-      fields.push('is_verified')
-      values.push(userData.is_verified)
-    }
-    
-    if (fields.length === 0) {
-      return this.findById(id)
-    }
-    
-    return this.update(id, fields, values)
   }
 
   // Verify user password
@@ -236,5 +194,53 @@ export class UserRepository extends BaseRepository<User> {
       action,
       data
     }))
+  }
+
+  async countUsers(): Promise<number> {
+    const result = await this.query('SELECT COUNT(*) as count FROM users')
+    return parseInt(result.rows[0].count)
+  }
+
+  async updateUser(id: string, updateData: UpdateUserData): Promise<User | null> {
+    const fields = Object.keys(updateData).filter(key => updateData[key as keyof UpdateUserData] !== undefined)
+    if (fields.length === 0) return null
+
+    // Map camelCase to snake_case for database columns
+    const fieldMapping: Record<string, string> = {
+      'isVerified': 'is_verified',
+      'profileImage': 'profile_image'
+    }
+
+    const dbFields = fields.map(field => fieldMapping[field] || field)
+    const setClause = dbFields.map((field, index) => `${field} = $${index + 2}`).join(', ')
+    const values = [id, ...fields.map(field => updateData[field as keyof UpdateUserData])]
+    
+    const query = `UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`
+    const result = await this.query(query, values)
+    return result.rows[0] || null
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await this.query('DELETE FROM users WHERE id = $1', [id])
+    return result.rowCount > 0
+  }
+
+  async getAllUsers(page: number = 1, limit: number = 20): Promise<{ users: User[], total: number }> {
+    const offset = (page - 1) * limit
+    
+    // Get total count
+    const countResult = await this.query('SELECT COUNT(*) as count FROM users')
+    const total = parseInt(countResult.rows[0].count)
+    
+    // Get users with pagination
+    const usersResult = await this.query(
+      'SELECT * FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
+    )
+    
+    return {
+      users: usersResult.rows,
+      total
+    }
   }
 }

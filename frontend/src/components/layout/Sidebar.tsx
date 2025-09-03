@@ -63,11 +63,14 @@ const moderatorNavigation = [
     icon: Shield,
     description: 'Review queue'
   },
+]
+
+const adminNavigation = [
   {
-    name: 'Users',
-    href: '/dashboard/users',
+    name: 'User Management',
+    href: '/dashboard/admin/users',
     icon: Users,
-    description: 'User management'
+    description: 'Manage users and roles'
   },
 ]
 
@@ -92,6 +95,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { user } = useAuthStore()
 
   const isModerator = user?.role === 'moderator' || user?.role === 'admin'
+  const isAdmin = user?.role === 'admin'
 
   return (
     <aside
@@ -168,6 +172,48 @@ export function Sidebar({ className }: SidebarProps) {
               )}
               <div className="space-y-1">
                 {moderatorNavigation.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                        isActive
+                          ? 'bg-indigo-100 text-indigo-900'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )}
+                      title={collapsed ? item.description : undefined}
+                    >
+                      <item.icon
+                        className={cn(
+                          'flex-shrink-0 h-5 w-5',
+                          collapsed ? 'mx-auto' : 'mr-3',
+                          isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                        )}
+                      />
+                      {!collapsed && (
+                        <span className="truncate">{item.name}</span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Admin Section */}
+        {isAdmin && (
+          <>
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              {!collapsed && (
+                <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Administration
+                </h3>
+              )}
+              <div className="space-y-1">
+                {adminNavigation.map((item) => {
                   const isActive = pathname === item.href
                   return (
                     <Link

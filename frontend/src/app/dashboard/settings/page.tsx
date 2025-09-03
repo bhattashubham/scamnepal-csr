@@ -1,15 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { Settings, User, Shield, Bell, Key, Globe, Database, Save } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Settings, User, Shield, Bell, Key, Globe, Database, Save, Upload, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
+import { useAuthStore } from '@/stores/auth'
+import { useUploadProfileImage } from '@/hooks/useUsers'
 
 export default function SettingsPage() {
+  const { user, getProfile } = useAuthStore()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadProfileImageMutation = useUploadProfileImage()
   const [profileSettings, setProfileSettings] = useState({
     firstName: 'Bhatta',
     lastName: 'Shubham',
@@ -46,6 +51,56 @@ export default function SettingsPage() {
     console.log('Security settings saved:', securitySettings)
   }
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      console.log('No file selected')
+      return
+    }
+
+    console.log('File selected:', file.name, file.size, file.type)
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB')
+      return
+    }
+
+    try {
+      console.log('Starting upload...')
+      const result = await uploadProfileImageMutation.mutateAsync(file)
+      console.log('Upload result:', result)
+      
+      // Refresh user profile to get updated profile image
+      console.log('Refreshing profile...')
+      await getProfile()
+      console.log('Profile refreshed')
+      
+      alert('Profile image updated successfully!')
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      alert(`Error uploading image: ${error.message}`)
+    }
+  }
+
+  const handleImageClick = () => {
+    console.log('Image click - current user:', user)
+    console.log('Image click - user.profileImage:', user?.profileImage)
+    fileInputRef.current?.click()
+  }
+
+  // Debug: Log user data changes
+  useEffect(() => {
+    console.log('Settings page - User data changed:', user)
+    console.log('Settings page - Profile image:', user?.profileImage)
+  }, [user])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -64,6 +119,63 @@ export default function SettingsPage() {
           <CardDescription>Update your personal information and contact details</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Profile Image Upload */}
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              {user?.profileImage ? (
+                <img 
+                  src={`http://localhost:3001${user.profileImage}`} 
+                  alt={user.email}
+                  className="w-20 h-20 rounded-full object-cover border-4 border-gray-200 cursor-pointer hover:border-indigo-300 transition-colors"
+                  onClick={handleImageClick}
+                  onError={(e) => {
+                    console.error('Image failed to load:', e.currentTarget.src)
+                    e.currentTarget.style.display = 'none'
+                  }}
+                  onLoad={() => console.log('Image loaded successfully:', user.profileImage)}
+                />
+              ) : (
+                <div 
+                  className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center border-4 border-gray-200 cursor-pointer hover:border-indigo-300 transition-colors"
+                  onClick={handleImageClick}
+                >
+                  <Camera className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+              <div className="absolute -bottom-1 -right-1 bg-indigo-600 rounded-full p-1 cursor-pointer hover:bg-indigo-700 transition-colors">
+                <Upload className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900">Profile Picture</h3>
+              <p className="text-sm text-gray-500">Click to upload a new profile image</p>
+              <p className="text-xs text-gray-400">JPG, PNG, GIF up to 5MB</p>
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={async () => {
+                    console.log('Manual refresh clicked')
+                    await getProfile()
+                    console.log('Manual refresh completed')
+                  }}
+                >
+                  Refresh Profile
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          
+          <Separator />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="firstName">First Name</Label>

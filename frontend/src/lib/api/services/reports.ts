@@ -40,13 +40,17 @@ export class ReportService {
     page: number = 1,
     limit: number = 20
   ): Promise<ApiResponse<PaginatedResponse<Report>>> {
-    return apiClient.get<PaginatedResponse<Report>>('/dashboard/reports', {
+    return apiClient.get<PaginatedResponse<Report>>('/reports/dashboard', {
       params: { ...filters, page, limit }
     })
   }
 
   static async getById(id: string): Promise<ApiResponse<Report>> {
     return apiClient.get<Report>(`/reports/${id}`)
+  }
+
+  static async getDetailedById(id: string): Promise<ApiResponse<any>> {
+    return apiClient.get<any>(`/reports/${id}/detailed`)
   }
 
   static async update(id: string, data: Partial<Report>): Promise<ApiResponse<Report>> {
@@ -89,6 +93,10 @@ export class ReportService {
 
   static async getEvidence(id: string): Promise<ApiResponse<any[]>> {
     return apiClient.get<any[]>(`/reports/${id}/evidence`)
+  }
+
+  static async getHistory(id: string): Promise<ApiResponse<any[]>> {
+    return apiClient.get<any[]>(`/reports/${id}/history`)
   }
 
   static async export(

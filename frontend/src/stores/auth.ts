@@ -227,20 +227,26 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       },
 
       getProfile: async () => {
+        console.log('🔐 Auth Store: getProfile called')
         set({ isLoading: true })
         
         try {
           const response = await AuthService.getProfile()
+          console.log('🔐 Auth Store: getProfile response:', response)
           
           if (response.success && response.data) {
+            console.log('🔐 Auth Store: Setting user data:', response.data)
             set({
               user: response.data,
               isLoading: false
             })
+            console.log('🔐 Auth Store: User data updated successfully')
           } else {
+            console.log('🔐 Auth Store: getProfile failed:', response.error)
             set({ isLoading: false })
           }
         } catch (error) {
+          console.error('🔐 Auth Store: getProfile error:', error)
           set({ isLoading: false })
         }
       },
