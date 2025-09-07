@@ -1,23 +1,25 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { 
-  Home, 
-  Search, 
-  FileText, 
-  Shield, 
-  Users, 
-  Settings, 
+import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  Home,
+  Search,
+  FileText,
+  Shield,
+  Users,
+  Settings,
   HelpCircle,
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
-  BarChart3
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/stores/auth'
+  BarChart3,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useAuthStore } from "@/stores/auth"
+import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface SidebarProps {
   className?: string
@@ -25,67 +27,67 @@ interface SidebarProps {
 
 const navigation = [
   {
-    name: 'Dashboard',
-    href: '/dashboard',
+    name: "Dashboard",
+    href: "/dashboard",
     icon: Home,
-    description: 'Overview and statistics'
+    description: "Overview and statistics",
   },
   {
-    name: 'Search',
-    href: '/dashboard/search',
+    name: "Search",
+    href: "/dashboard/search",
     icon: Search,
-    description: 'Search the registry'
+    description: "Search the registry",
   },
   {
-    name: 'Reports',
-    href: '/dashboard/reports',
+    name: "Reports",
+    href: "/dashboard/reports",
     icon: FileText,
-    description: 'Manage scam reports'
+    description: "Manage scam reports",
   },
   {
-    name: 'Entities',
-    href: '/dashboard/entities',
+    name: "Entities",
+    href: "/dashboard/entities",
     icon: AlertTriangle,
-    description: 'Flagged entities'
+    description: "Flagged entities",
   },
   {
-    name: 'Analytics',
-    href: '/dashboard/analytics',
+    name: "Analytics",
+    href: "/dashboard/analytics",
     icon: BarChart3,
-    description: 'Data insights'
+    description: "Data insights",
   },
 ]
 
 const moderatorNavigation = [
   {
-    name: 'Moderation',
-    href: '/dashboard/moderation',
+    name: "Moderation",
+    href: "/dashboard/moderation",
     icon: Shield,
-    description: 'Review queue'
+    description: "Review queue",
   },
 ]
 
 const adminNavigation = [
   {
-    name: 'User Management',
-    href: '/dashboard/admin/users',
+    name: "User Management",
+    href: "/dashboard/admin/users",
     icon: Users,
-    description: 'Manage users and roles'
+    description: "Manage users and roles",
   },
 ]
 
 const bottomNavigation = [
   {
-    name: 'Settings',
-    href: '/dashboard/settings',
+    name: "Settings",
+    href: "/dashboard/settings",
     icon: Settings,
-    description: 'Account settings'
+    description: "Account settings",
   },
   {
-    name: 'Help',
-    href: '/dashboard/help',
+    name: "Help",
+    href: "/dashboard/help",
     icon: HelpCircle,
-    description: 'Support center'
+    description: "Support center",
   },
 ]
 
@@ -94,68 +96,58 @@ export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
   const { user } = useAuthStore()
 
-  const isModerator = user?.role === 'moderator' || user?.role === 'admin'
-  const isAdmin = user?.role === 'admin'
+  const isModerator = user?.role === "moderator" || user?.role === "admin"
+  const isAdmin = user?.role === "admin"
 
   return (
     <aside
       className={cn(
-        'bg-white border-r border-gray-200 flex flex-col transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64',
+        "flex flex-col border-r bg-card transition-all duration-300",
+        collapsed ? "w-16" : "w-64",
         className
       )}
     >
       {/* Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+      <div className="flex h-16 items-center justify-between px-4 border-b">
         {!collapsed && (
-          <div className="flex items-center space-x-3">
-            <Shield className="h-8 w-8 text-indigo-600" />
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">CSR</h1>
-              <p className="text-xs text-gray-500">v1.0.0</p>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Shield className="h-6 w-6 text-primary" />
+            <span className="font-bold text-lg text-gradient">ScamNepal</span>
           </div>
         )}
-        
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          className="ml-auto"
         >
           {collapsed ? (
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4" />
           ) : (
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 px-2 py-4 space-y-1">
         <div className="space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname.startsWith(item.href)
+            const Icon = item.icon
             return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                  isActive
-                    ? 'bg-indigo-100 text-indigo-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                )}
-                title={collapsed ? item.description : undefined}
-              >
-                <item.icon
+              <Link key={item.name} href={item.href}>
+                <Button
+                  variant={isActive ? "default" : "ghost"}
                   className={cn(
-                    'flex-shrink-0 h-5 w-5',
-                    collapsed ? 'mx-auto' : 'mr-3',
-                    isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                    "w-full justify-start gap-3",
+                    collapsed && "justify-center px-0"
                   )}
-                />
-                {!collapsed && (
-                  <span className="truncate">{item.name}</span>
-                )}
+                  title={collapsed ? item.name : undefined}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && <span className="truncate">{item.name}</span>}
+                </Button>
               </Link>
             )
           })}
@@ -164,37 +156,29 @@ export function Sidebar({ className }: SidebarProps) {
         {/* Moderator Section */}
         {isModerator && (
           <>
-            <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="border-t pt-4 mt-4">
               {!collapsed && (
-                <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Moderation
                 </h3>
               )}
               <div className="space-y-1">
                 {moderatorNavigation.map((item) => {
                   const isActive = pathname === item.href
+                  const Icon = item.icon
                   return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={cn(
-                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                        isActive
-                          ? 'bg-indigo-100 text-indigo-900'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      )}
-                      title={collapsed ? item.description : undefined}
-                    >
-                      <item.icon
+                    <Link key={item.name} href={item.href}>
+                      <Button
+                        variant={isActive ? "default" : "ghost"}
                         className={cn(
-                          'flex-shrink-0 h-5 w-5',
-                          collapsed ? 'mx-auto' : 'mr-3',
-                          isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                          "w-full justify-start gap-3",
+                          collapsed && "justify-center px-0"
                         )}
-                      />
-                      {!collapsed && (
-                        <span className="truncate">{item.name}</span>
-                      )}
+                        title={collapsed ? item.name : undefined}
+                      >
+                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        {!collapsed && <span className="truncate">{item.name}</span>}
+                      </Button>
                     </Link>
                   )
                 })}
@@ -206,37 +190,29 @@ export function Sidebar({ className }: SidebarProps) {
         {/* Admin Section */}
         {isAdmin && (
           <>
-            <div className="border-t border-gray-200 pt-4 mt-4">
+            <div className="border-t pt-4 mt-4">
               {!collapsed && (
-                <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <h3 className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Administration
                 </h3>
               )}
               <div className="space-y-1">
                 {adminNavigation.map((item) => {
                   const isActive = pathname === item.href
+                  const Icon = item.icon
                   return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={cn(
-                        'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                        isActive
-                          ? 'bg-indigo-100 text-indigo-900'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      )}
-                      title={collapsed ? item.description : undefined}
-                    >
-                      <item.icon
+                    <Link key={item.name} href={item.href}>
+                      <Button
+                        variant={isActive ? "default" : "ghost"}
                         className={cn(
-                          'flex-shrink-0 h-5 w-5',
-                          collapsed ? 'mx-auto' : 'mr-3',
-                          isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                          "w-full justify-start gap-3",
+                          collapsed && "justify-center px-0"
                         )}
-                      />
-                      {!collapsed && (
-                        <span className="truncate">{item.name}</span>
-                      )}
+                        title={collapsed ? item.name : undefined}
+                      >
+                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        {!collapsed && <span className="truncate">{item.name}</span>}
+                      </Button>
                     </Link>
                   )
                 })}
@@ -246,53 +222,53 @@ export function Sidebar({ className }: SidebarProps) {
         )}
       </nav>
 
-      {/* Bottom Navigation */}
-      <div className="p-4 border-t border-gray-200 space-y-1">
+      {/* Bottom Section */}
+      <div className="px-2 py-4 border-t space-y-2">
         {bottomNavigation.map((item) => {
           const isActive = pathname === item.href
+          const Icon = item.icon
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
-                isActive
-                  ? 'bg-indigo-100 text-indigo-900'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              )}
-              title={collapsed ? item.description : undefined}
-            >
-              <item.icon
+            <Link key={item.name} href={item.href}>
+              <Button
+                variant="ghost"
                 className={cn(
-                  'flex-shrink-0 h-5 w-5',
-                  collapsed ? 'mx-auto' : 'mr-3',
-                  isActive ? 'text-indigo-500' : 'text-gray-400 group-hover:text-gray-500'
+                  "w-full justify-start gap-3",
+                  collapsed && "justify-center px-0"
                 )}
-              />
-              {!collapsed && (
-                <span className="truncate">{item.name}</span>
-              )}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {!collapsed && <span className="truncate">{item.name}</span>}
+              </Button>
             </Link>
           )
         })}
+        <div
+          className={cn(
+            "flex justify-center pt-2",
+            !collapsed && "justify-start"
+          )}
+        >
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* User Info */}
       {!collapsed && user && (
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">
+              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
+                <span className="text-primary-foreground text-sm font-medium">
                   {user.email?.[0]?.toUpperCase()}
                 </span>
               </div>
             </div>
             <div className="ml-3 min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-foreground truncate">
                 {user.email}
               </p>
-              <p className="text-xs text-gray-500 capitalize">
+              <p className="text-xs text-muted-foreground capitalize">
                 {user.role}
               </p>
             </div>

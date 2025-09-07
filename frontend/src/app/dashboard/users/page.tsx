@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { getStatusColors } from '@/lib/theme-utils'
 
 interface User {
   id: string
@@ -70,20 +71,16 @@ export default function UsersPage() {
 
   const getRoleBadge = (role: User['role']) => {
     const variants = {
-      user: 'bg-blue-100 text-blue-800',
-      moderator: 'bg-purple-100 text-purple-800',
-      admin: 'bg-red-100 text-red-800'
+      user: 'bg-info/10 text-info',
+      moderator: 'bg-purple/10 text-purple',
+      admin: 'bg-destructive/10 text-destructive'
     }
     return <Badge className={variants[role]}>{role}</Badge>
   }
 
   const getStatusBadge = (status: User['status']) => {
-    const variants = {
-      active: 'bg-green-100 text-green-800',
-      suspended: 'bg-red-100 text-red-800',
-      pending: 'bg-yellow-100 text-yellow-800'
-    }
-    return <Badge className={variants[status]}>{status}</Badge>
+    const colors = getStatusColors(status)
+    return <Badge className={colors.badge}>{status}</Badge>
   }
 
   return (
@@ -91,8 +88,8 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">Manage user accounts and permissions</p>
+          <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+          <p className="text-muted-foreground">Manage user accounts and permissions</p>
         </div>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
@@ -105,7 +102,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
-              <Users className="h-8 w-8 text-blue-600" />
+              <Users className="h-8 w-8 text-info" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Users</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
@@ -117,7 +114,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
-              <UserCheck className="h-8 w-8 text-green-600" />
+              <UserCheck className="h-8 w-8 text-success" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Users</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.activeUsers}</p>
@@ -129,7 +126,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
-              <Shield className="h-8 w-8 text-purple-600" />
+              <Shield className="h-8 w-8 text-purple" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Moderators</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.moderators}</p>
@@ -141,7 +138,7 @@ export default function UsersPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
-              <Shield className="h-8 w-8 text-red-600" />
+              <Shield className="h-8 w-8 text-destructive" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Admins</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.admins}</p>

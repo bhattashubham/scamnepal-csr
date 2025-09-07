@@ -8,6 +8,8 @@ import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FieldValidationError, AuthError } from '@/components/ui/error-components'
+import { FormErrorBoundary } from '@/components/error-boundaries'
 import { Loader2, ArrowLeft } from 'lucide-react'
 
 const otpSchema = z.object({
@@ -82,29 +84,30 @@ export function OTPForm({ email, phoneNumber, onSuccess, onBack }: OTPFormProps)
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <div className="flex items-center justify-center mb-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="absolute left-6 p-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <CardTitle>Verify Your Identity</CardTitle>
-        </div>
-        <CardDescription>
-          Enter the 6-digit code sent to{' '}
-          <span className="font-medium">
-            {email || phoneNumber}
-          </span>
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <FormErrorBoundary formName="OTPForm">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center mb-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="absolute left-6 p-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <CardTitle>Verify Your Identity</CardTitle>
+          </div>
+          <CardDescription>
+            Enter the 6-digit code sent to{' '}
+            <span className="font-medium">
+              {email || phoneNumber}
+            </span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+            <label className="block text-sm font-medium text-foreground mb-2 text-center">
               Verification Code
             </label>
             <Input
@@ -113,20 +116,24 @@ export function OTPForm({ email, phoneNumber, onSuccess, onBack }: OTPFormProps)
               {...register('otp')}
               onChange={handleOTPInput}
               className={`text-center text-2xl font-mono tracking-widest ${
-                errors.otp ? 'border-red-500' : ''
+                errors.otp ? 'border-destructive' : ''
               }`}
               maxLength={6}
               autoComplete="one-time-code"
             />
-            {errors.otp && (
-              <p className="text-sm text-red-600 mt-1 text-center">{errors.otp.message}</p>
-            )}
+            <FieldValidationError 
+              error={errors.otp?.message} 
+              touched={!!errors.otp}
+              className="text-center"
+            />
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-600 text-center">{error}</p>
-            </div>
+            <AuthError 
+              error={{ message: error, type: 'otp_invalid' }}
+              variant="card"
+              onRetry={handleResendOTP}
+            />
           )}
 
           <Button
@@ -147,11 +154,11 @@ export function OTPForm({ email, phoneNumber, onSuccess, onBack }: OTPFormProps)
 
         <div className="text-center space-y-2">
           {timeLeft > 0 ? (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Code expires in {formatTime(timeLeft)}
             </p>
           ) : (
-            <p className="text-sm text-red-600">
+            <p className="text-sm text-destructive">
               Code has expired
             </p>
           )}
@@ -162,17 +169,18 @@ export function OTPForm({ email, phoneNumber, onSuccess, onBack }: OTPFormProps)
             size="sm"
             onClick={handleResendOTP}
             disabled={!canResend}
-            className="text-indigo-600 hover:text-indigo-800"
+            className="text-primary hover:text-primary/80"
           >
             {canResend ? 'Resend Code' : `Resend in ${formatTime(timeLeft)}`}
           </Button>
         </div>
 
-        <div className="text-xs text-gray-500 text-center">
+        <div className="text-xs text-muted-foreground text-center">
           <p>Didn't receive the code?</p>
           <p>Check your spam folder or try resending</p>
         </div>
       </CardContent>
     </Card>
+    </FormErrorBoundary>
   )
 }

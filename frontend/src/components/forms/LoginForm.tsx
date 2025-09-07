@@ -8,6 +8,8 @@ import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FieldValidationError, ValidationSummary, AuthError } from '@/components/ui/error-components'
+import { FormErrorBoundary } from '@/components/error-boundaries'
 import { Loader2, Mail, Phone } from 'lucide-react'
 
 const loginSchema = z.object({
@@ -67,14 +69,15 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onSwitchToOTP }: Logi
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle>Welcome Back</CardTitle>
-        <CardDescription>
-          Sign in to your account to continue
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <FormErrorBoundary formName="LoginForm">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle>Welcome Back</CardTitle>
+          <CardDescription>
+            Sign in to your account to continue
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
         {/* Login Method Toggle */}
         <div className="flex rounded-lg border border-input p-1 bg-muted/50">
           <button
@@ -115,9 +118,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onSwitchToOTP }: Logi
                 {...register('email')}
                 className={errors.email ? 'border-destructive' : ''}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
-              )}
+              <FieldValidationError 
+                error={errors.email?.message} 
+                touched={!!errors.email}
+              />
             </div>
           ) : (
             <div>
@@ -130,9 +134,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onSwitchToOTP }: Logi
                 {...register('phoneNumber')}
                 className={errors.phoneNumber ? 'border-destructive' : ''}
               />
-              {errors.phoneNumber && (
-                <p className="text-sm text-destructive mt-1">{errors.phoneNumber.message}</p>
-              )}
+              <FieldValidationError 
+                error={errors.phoneNumber?.message} 
+                touched={!!errors.phoneNumber}
+              />
             </div>
           )}
 
@@ -151,9 +156,11 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onSwitchToOTP }: Logi
           </div>
 
           {error && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
+            <AuthError 
+              error={{ message: error, type: 'invalid_credentials' }}
+              variant="card"
+              onRetry={() => {}}
+            />
           )}
 
           <div className="space-y-3">
@@ -198,5 +205,6 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onSwitchToOTP }: Logi
         </div>
       </CardContent>
     </Card>
+    </FormErrorBoundary>
   )
 }

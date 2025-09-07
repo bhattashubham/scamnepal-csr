@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/useUsers'
 import { useAuthStore } from '@/stores/auth'
+import { getImageUrl } from '@/lib/config'
 import { formatRelativeTime } from '@/lib/utils'
 import { CreateUserData, UpdateUserData } from '@/lib/api/services/users'
 
@@ -394,7 +395,7 @@ export default function UsersManagementPage() {
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-10 w-10">
-                              <AvatarImage src={user.profileImage ? `http://localhost:3001${user.profileImage}` : undefined} />
+                              <AvatarImage src={user.profileImage ? getImageUrl(user.profileImage) : undefined} />
                               <AvatarFallback>
                                 {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                               </AvatarFallback>
@@ -489,7 +490,7 @@ export default function UsersManagementPage() {
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-12 w-12">
-                            <AvatarImage src={user.profileImage ? `http://localhost:3001${user.profileImage}` : undefined} />
+                            <AvatarImage src={user.profileImage ? getImageUrl(user.profileImage) : undefined} />
                             <AvatarFallback>
                               {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                             </AvatarFallback>

@@ -18,6 +18,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FieldValidationError, ValidationSummary, NetworkError } from '@/components/ui/error-components'
+import { FormErrorBoundary } from '@/components/error-boundaries'
 import { useCreateReport } from '@/hooks/useReports'
 import { CreateReportForm } from '@/types'
 import { ReportService } from '@/lib/api/services/reports'
@@ -216,7 +218,8 @@ export default function NewReportPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <FormErrorBoundary formName="NewReportForm">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center space-x-4 mb-4">
@@ -229,8 +232,8 @@ export default function NewReportPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Report a Scam</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl font-bold text-foreground">Report a Scam</h1>
+            <p className="text-muted-foreground">
               Help protect others by sharing your experience
             </p>
           </div>
@@ -242,13 +245,13 @@ export default function NewReportPage() {
             <div key={stepNumber} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                 stepNumber <= step 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-200 text-gray-600'
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'
               }`}>
                 {stepNumber}
               </div>
               <span className={`ml-2 text-sm ${
-                stepNumber <= step ? 'text-indigo-600' : 'text-gray-500'
+                stepNumber <= step ? 'text-primary' : 'text-muted-foreground'
               }`}>
                 {stepNumber === 1 && 'Basic Info'}
                 {stepNumber === 2 && 'Incident Details'}
@@ -256,7 +259,7 @@ export default function NewReportPage() {
               </span>
               {stepNumber < 3 && (
                 <div className={`mx-4 h-0.5 w-16 ${
-                  stepNumber < step ? 'bg-indigo-600' : 'bg-gray-200'
+                  stepNumber < step ? 'bg-primary' : 'bg-border'
                 }`} />
               )}
             </div>
@@ -277,54 +280,57 @@ export default function NewReportPage() {
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Identifier Type *
                   </label>
                   <select
                     {...register('identifierType')}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Select identifier type</option>
                     {identifierTypes.map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
-                  {errors.identifierType && (
-                    <p className="text-sm text-red-600 mt-1">{errors.identifierType.message}</p>
-                  )}
+                  <FieldValidationError 
+                    error={errors.identifierType?.message} 
+                    touched={!!errors.identifierType}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Identifier Value *
                   </label>
                   <Input
                     {...register('identifierValue')}
                     placeholder="e.g., +91-9876543210, scammer@email.com"
-                    className={errors.identifierValue ? 'border-red-500' : ''}
+                    className={errors.identifierValue ? 'border-destructive' : ''}
                   />
-                  {errors.identifierValue && (
-                    <p className="text-sm text-red-600 mt-1">{errors.identifierValue.message}</p>
-                  )}
+                  <FieldValidationError 
+                    error={errors.identifierValue?.message} 
+                    touched={!!errors.identifierValue}
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Scam Category *
                 </label>
                 <select
                   {...register('scamCategory')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Select scam category</option>
                   {scamCategories.map((category) => (
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
-                {errors.scamCategory && (
-                  <p className="text-sm text-red-600 mt-1">{errors.scamCategory.message}</p>
-                )}
+                <FieldValidationError 
+                  error={errors.scamCategory?.message} 
+                  touched={!!errors.scamCategory}
+                />
               </div>
 
               <div className="flex justify-end">
@@ -348,7 +354,7 @@ export default function NewReportPage() {
             <CardContent className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Amount Lost *
                   </label>
                   <Input
@@ -357,20 +363,20 @@ export default function NewReportPage() {
                     placeholder="0"
                     min="0"
                     step="0.01"
-                    className={errors.amountLost ? 'border-red-500' : ''}
+                    className={errors.amountLost ? 'border-destructive' : ''}
                   />
                   {errors.amountLost && (
-                    <p className="text-sm text-red-600 mt-1">{errors.amountLost.message}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.amountLost.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Currency *
                   </label>
                   <select
                     {...register('currency')}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     {currencies.map((currency) => (
                       <option key={currency} value={currency}>{currency}</option>
@@ -381,26 +387,26 @@ export default function NewReportPage() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Incident Date *
                   </label>
                   <Input
                     type="date"
                     {...register('incidentDate')}
-                    className={errors.incidentDate ? 'border-red-500' : ''}
+                    className={errors.incidentDate ? 'border-destructive' : ''}
                   />
                   {errors.incidentDate && (
-                    <p className="text-sm text-red-600 mt-1">{errors.incidentDate.message}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.incidentDate.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Contact Channel *
                   </label>
                   <select
                     {...register('incidentChannel')}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Select channel</option>
                     {incidentChannels.map((channel) => (
@@ -408,18 +414,18 @@ export default function NewReportPage() {
                     ))}
                   </select>
                   {errors.incidentChannel && (
-                    <p className="text-sm text-red-600 mt-1">{errors.incidentChannel.message}</p>
+                    <p className="text-sm text-destructive mt-1">{errors.incidentChannel.message}</p>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   How They Contacted You *
                 </label>
                 <select
                   {...register('contactMethod')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Select contact method</option>
                   {incidentChannels.map((method) => (
@@ -427,7 +433,7 @@ export default function NewReportPage() {
                   ))}
                 </select>
                 {errors.contactMethod && (
-                  <p className="text-sm text-red-600 mt-1">{errors.contactMethod.message}</p>
+                  <p className="text-sm text-destructive mt-1">{errors.contactMethod.message}</p>
                 )}
               </div>
 
@@ -454,25 +460,26 @@ export default function NewReportPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Detailed Description *
                 </label>
                 <textarea
                   {...register('narrative')}
                   rows={6}
                   placeholder="Describe what happened, how the scammer approached you, what they said, and any other relevant details..."
-                  className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    errors.narrative ? 'border-red-500' : ''
+                  className={`w-full border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring ${
+                    errors.narrative ? 'border-destructive' : ''
                   }`}
                 />
-                {errors.narrative && (
-                  <p className="text-sm text-red-600 mt-1">{errors.narrative.message}</p>
-                )}
+                <FieldValidationError 
+                  error={errors.narrative?.message} 
+                  touched={!!errors.narrative}
+                />
               </div>
 
               {/* Suspected Links */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Suspected Links or URLs (Optional)
                 </label>
                 <div className="space-y-2">
@@ -509,10 +516,10 @@ export default function NewReportPage() {
 
               {/* File Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Evidence Files (Optional)
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <div className="border-2 border-dashed border-input rounded-lg p-6 text-center">
                   <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-sm text-gray-600 mb-2">
                     Upload screenshots, messages, or other evidence
@@ -557,7 +564,7 @@ export default function NewReportPage() {
                     {files.map((file, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-700">{file.name}</span>
+                          <span className="text-sm text-foreground">{file.name}</span>
                           <span className="text-xs text-gray-500">
                             ({(file.size / 1024 / 1024).toFixed(2)} MB)
                           </span>
@@ -603,17 +610,16 @@ export default function NewReportPage() {
 
       {/* Error Display */}
       {createReportMutation.error && (
-        <Card className="mt-6 border-red-200 bg-red-50">
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
-              <span className="text-red-800">
-                Failed to submit report. Please try again.
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <NetworkError 
+          error={{ 
+            message: createReportMutation.error.message || 'Failed to submit report. Please try again.',
+            status: (createReportMutation.error as any).status
+          }}
+          variant="card"
+          onRetry={() => createReportMutation.mutate(watchedValues)}
+        />
       )}
     </div>
+    </FormErrorBoundary>
   )
 }

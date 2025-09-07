@@ -8,6 +8,8 @@ import { useAuthStore } from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FieldValidationError, ValidationSummary, AuthError } from '@/components/ui/error-components'
+import { FormErrorBoundary } from '@/components/error-boundaries'
 import { Loader2, Mail, Phone } from 'lucide-react'
 
 const registerSchema = z.object({
@@ -59,23 +61,24 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle>Create Account</CardTitle>
-        <CardDescription>
-          Join the community to help fight scams
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <FormErrorBoundary formName="RegisterForm">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle>Create Account</CardTitle>
+          <CardDescription>
+            Join the community to help fight scams
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
         {/* Registration Method Toggle */}
-        <div className="flex rounded-lg border border-gray-200 p-1">
+        <div className="flex rounded-lg border border-input p-1 bg-muted/50">
           <button
             type="button"
             onClick={() => setRegistrationMethod('email')}
             className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
               registrationMethod === 'email'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Mail className="h-4 w-4" />
@@ -86,8 +89,8 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
             onClick={() => setRegistrationMethod('phone')}
             className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
               registrationMethod === 'phone'
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Phone className="h-4 w-4" />
@@ -98,38 +101,40 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {registrationMethod === 'email' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Email Address
               </label>
               <Input
                 type="email"
                 placeholder="Enter your email"
                 {...register('email')}
-                className={errors.email ? 'border-red-500' : ''}
+                className={errors.email ? 'border-destructive' : ''}
               />
-              {errors.email && (
-                <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
-              )}
+              <FieldValidationError 
+                error={errors.email?.message} 
+                touched={!!errors.email}
+              />
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Phone Number
               </label>
               <Input
                 type="tel"
                 placeholder="Enter your phone number"
                 {...register('phoneNumber')}
-                className={errors.phoneNumber ? 'border-red-500' : ''}
+                className={errors.phoneNumber ? 'border-destructive' : ''}
               />
-              {errors.phoneNumber && (
-                <p className="text-sm text-red-600 mt-1">{errors.phoneNumber.message}</p>
-              )}
+              <FieldValidationError 
+                error={errors.phoneNumber?.message} 
+                touched={!!errors.phoneNumber}
+              />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Password (Optional)
             </label>
             <Input
@@ -137,15 +142,17 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
               placeholder="Create a password (optional)"
               {...register('password')}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               You can use OTP authentication instead of a password
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
+            <AuthError 
+              error={{ message: error, type: 'invalid_credentials' }}
+              variant="card"
+              onRetry={() => {}}
+            />
           )}
 
           <Button
@@ -164,30 +171,31 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
           </Button>
         </form>
 
-        <div className="text-center pt-4 border-t">
-          <p className="text-sm text-gray-600">
+        <div className="text-center pt-4 border-t border-border">
+          <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-indigo-600 hover:text-indigo-800 font-medium"
+              className="text-primary hover:text-primary/80 font-medium"
             >
               Sign in
             </button>
           </p>
         </div>
 
-        <div className="text-xs text-gray-500 text-center">
+        <div className="text-xs text-muted-foreground text-center">
           By creating an account, you agree to our{' '}
-          <a href="/terms" className="text-indigo-600 hover:text-indigo-800">
+          <a href="/terms" className="text-primary hover:text-primary/80">
             Terms of Service
           </a>{' '}
           and{' '}
-          <a href="/privacy" className="text-indigo-600 hover:text-indigo-800">
+          <a href="/privacy" className="text-primary hover:text-primary/80">
             Privacy Policy
           </a>
         </div>
       </CardContent>
     </Card>
+    </FormErrorBoundary>
   )
 }

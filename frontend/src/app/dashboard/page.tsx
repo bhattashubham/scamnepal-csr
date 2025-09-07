@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useReports, useReportStats } from '@/hooks/useReports'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils'
 import { ReportStats } from '@/types'
+import { getStatusColors, getRiskScoreColors } from '@/lib/theme-utils'
 import Link from 'next/link'
 
 export default function DashboardPage() {
@@ -64,23 +65,12 @@ export default function DashboardPage() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified':
-        return 'text-green-600 bg-green-50 border-green-200'
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-      case 'under_review':
-        return 'text-blue-600 bg-blue-50 border-blue-200'
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200'
-    }
+    const colors = getStatusColors(status)
+    return `${colors.text} ${colors.bg} border-border`
   }
 
   const getRiskScoreColor = (score: number) => {
-    if (score >= 80) return 'text-red-600 bg-red-50'
-    if (score >= 60) return 'text-orange-600 bg-orange-50'
-    if (score >= 40) return 'text-yellow-600 bg-yellow-50'
-    return 'text-green-600 bg-green-50'
+    return getRiskScoreColors(score)
   }
 
   const getCategoryIcon = (category: string) => {

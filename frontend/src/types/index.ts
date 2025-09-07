@@ -11,6 +11,15 @@ export interface User {
   lastLogin?: string
 }
 
+export interface EvidenceFile {
+  id: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  storageUrl: string
+  uploadedAt: string
+}
+
 export interface Report {
   id: string
   identifierType: string
@@ -27,6 +36,7 @@ export interface Report {
   reporterEmail: string
   createdAt: string
   updatedAt: string
+  evidenceFiles?: EvidenceFile[]
 }
 
 export interface Entity {

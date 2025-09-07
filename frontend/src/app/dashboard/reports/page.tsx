@@ -23,6 +23,8 @@ import { useReports, useUpdateReportStatus, useDeleteReport } from '@/hooks/useR
 import { formatCurrency, formatRelativeTime, formatRiskScore } from '@/lib/utils'
 import { Report } from '@/types'
 import { useAuthStore } from '@/stores/auth'
+import { getApiUrl } from '@/lib/config'
+import { getStatusColors, getRiskScoreColors } from '@/lib/theme-utils'
 
 export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -51,7 +53,7 @@ export default function ReportsPage() {
   // Debug function to test API directly
   const testAPI = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/reports/dashboard', {
+      const response = await fetch(`${getApiUrl()}/api/reports/dashboard`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -67,33 +69,24 @@ export default function ReportsPage() {
   }
 
   const getStatusIcon = (status: Report['status']) => {
+    const colors = getStatusColors(status)
     switch (status) {
       case 'verified':
-        return <CheckCircle className="h-4 w-4 text-green-600" />
+        return <CheckCircle className={`h-4 w-4 ${colors.icon}`} />
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />
+        return <Clock className={`h-4 w-4 ${colors.icon}`} />
       case 'under_review':
-        return <AlertTriangle className="h-4 w-4 text-blue-600" />
+        return <AlertTriangle className={`h-4 w-4 ${colors.icon}`} />
       case 'rejected':
-        return <XCircle className="h-4 w-4 text-red-600" />
+        return <XCircle className={`h-4 w-4 ${colors.icon}`} />
       default:
-        return <Clock className="h-4 w-4 text-gray-600" />
+        return <Clock className={`h-4 w-4 ${colors.icon}`} />
     }
   }
 
   const getStatusColor = (status: Report['status']) => {
-    switch (status) {
-      case 'verified':
-        return 'text-green-700 bg-green-50 border-green-200'
-      case 'pending':
-        return 'text-yellow-700 bg-yellow-50 border-yellow-200'
-      case 'under_review':
-        return 'text-blue-700 bg-blue-50 border-blue-200'
-      case 'rejected':
-        return 'text-red-700 bg-red-50 border-red-200'
-      default:
-        return 'text-gray-700 bg-gray-50 border-gray-200'
-    }
+    const colors = getStatusColors(status)
+    return `${colors.text} ${colors.bg} border-border`
   }
 
   const handleStatusUpdate = async (reportId: string, newStatus: Report['status']) => {

@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/stores/auth'
 import { useUploadProfileImage } from '@/hooks/useUsers'
+import { getImageUrl } from '@/lib/config'
 
 export default function SettingsPage() {
   const { user, getProfile } = useAuthStore()
@@ -124,7 +125,7 @@ export default function SettingsPage() {
             <div className="relative">
               {user?.profileImage ? (
                 <img 
-                  src={`http://localhost:3001${user.profileImage}`} 
+                  src={getImageUrl(user.profileImage)} 
                   alt={user.email}
                   className="w-20 h-20 rounded-full object-cover border-4 border-gray-200 cursor-pointer hover:border-indigo-300 transition-colors"
                   onClick={handleImageClick}

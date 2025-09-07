@@ -38,6 +38,9 @@ import { useComments, useAddComment, useToggleReaction, useCommentReplies } from
 import { formatCurrency, formatRelativeTime, formatRiskScore, formatDate } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
 import { Report, Comment } from '@/types'
+import { getApiUrl, getImageUrl } from '@/lib/config'
+import { EvidenceViewer } from '@/components/ui/evidence-viewer'
+import { getStatusColors } from '@/lib/theme-utils'
 
 interface ReportDetailsProps {
   reportId: string
@@ -70,10 +73,41 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
 
   const report = reportData?.data
   const comments = commentsData?.data?.comments || []
-  const riskScoreInfo = report ? formatRiskScore(report.riskScore) : null
+  const riskScoreInfo = report?.riskScore ? formatRiskScore(report.riskScore) : null
+
+  // Show loading state
+  if (!reportData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading report details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (reportData?.error || !report) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2">Report Not Found</h2>
+          <p className="text-muted-foreground mb-4">
+            {reportData?.error?.message || 'The report you are looking for could not be found.'}
+          </p>
+          <Button onClick={onBack} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !report) return
+    if (!newComment.trim() || !report?.id) return
 
     try {
       await addCommentMutation.mutateAsync({
@@ -87,7 +121,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   }
 
   const handleAddReply = async (parentId: string) => {
-    if (!replyContent.trim() || !report) return
+    if (!replyContent.trim() || !report?.id) return
 
     try {
       await addCommentMutation.mutateAsync({
@@ -113,7 +147,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   const handleViewMoreReplies = async (commentId: string) => {
     try {
       // Fetch all replies for this comment
-      const response = await fetch(`http://localhost:3001/api/comments/${commentId}/replies?page=1&limit=100`, {
+      const response = await fetch(`${getApiUrl()}/api/comments/${commentId}/replies?page=1&limit=100`, {
         headers: {
           'Authorization': `Bearer ${btoa(JSON.stringify({ userId: user?.id, email: user?.email, role: user?.role }))}`,
           'Content-Type': 'application/json'
@@ -142,27 +176,24 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   }
 
   const getStatusIcon = (status: string) => {
+    const colors = getStatusColors(status)
     switch (status) {
-      case 'verified': return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'rejected': return <XCircle className="h-5 w-5 text-red-500" />
-      case 'under_review': return <Clock className="h-5 w-5 text-yellow-500" />
-      default: return <AlertTriangle className="h-5 w-5 text-gray-500" />
+      case 'verified': return <CheckCircle className={`h-5 w-5 ${colors.icon}`} />
+      case 'rejected': return <XCircle className={`h-5 w-5 ${colors.icon}`} />
+      case 'under_review': return <Clock className={`h-5 w-5 ${colors.icon}`} />
+      default: return <AlertTriangle className={`h-5 w-5 ${colors.icon}`} />
     }
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return 'bg-green-100 text-green-800'
-      case 'rejected': return 'bg-red-100 text-red-800'
-      case 'under_review': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+    const colors = getStatusColors(status)
+    return colors.badge
   }
 
   if (reportLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -170,9 +201,9 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (!report) {
     return (
       <div className="text-center py-12">
-        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Report not found</h3>
-        <p className="text-gray-500 mb-4">The report you're looking for doesn't exist or has been removed.</p>
+        <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">Report not found</h3>
+        <p className="text-muted-foreground mb-4">The report you're looking for doesn't exist or has been removed.</p>
         <Button onClick={onBack} variant="outline">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Reports
@@ -212,7 +243,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                 <div className="flex items-center space-x-4 text-sm text-gray-600">
                   <span className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
-                    <span>Reported {formatRelativeTime(report.createdAt)}</span>
+                    <span>Reported {report.createdAt ? formatRelativeTime(report.createdAt) : 'Unknown'}</span>
                   </span>
                   <span className="flex items-center space-x-1">
                     <MessageSquare className="h-4 w-4" />
@@ -225,11 +256,11 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-sm text-gray-500 mb-1">Report Status</p>
-                <div className={`${getStatusColor(report.status)} flex items-center space-x-2 px-4 py-2 text-sm font-medium shadow-sm rounded-md border cursor-default`}>
-                  {getStatusIcon(report.status)}
-                  <span className="capitalize">{report.status.replace('_', ' ')}</span>
+                <div className={`${getStatusColor(report.status || 'pending')} flex items-center space-x-2 px-4 py-2 text-sm font-medium shadow-sm rounded-md border cursor-default`}>
+                  {getStatusIcon(report.status || 'pending')}
+                  <span className="capitalize">{(report.status || 'pending').replace('_', ' ')}</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Last updated {formatRelativeTime(report.updatedAt || report.createdAt)}</p>
+                <p className="text-xs text-gray-400 mt-1">Last updated {formatRelativeTime(report.updatedAt || report.createdAt || '')}</p>
               </div>
             </div>
           </div>
@@ -342,7 +373,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                     <DollarSign className="h-5 w-5 text-red-500" />
                     <div>
                       <span className="text-sm text-gray-500">Money Lost: </span>
-                      <span className="text-lg font-bold text-red-600">{formatCurrency(report.amountLost, report.currency)}</span>
+                      <span className="text-lg font-bold text-red-600">{formatCurrency(report.amountLost || 0, report.currency || 'NPR')}</span>
                     </div>
                   </div>
                   
@@ -350,7 +381,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                     <Calendar className="h-5 w-5 text-blue-500" />
                     <div>
                       <span className="text-sm text-gray-500">When it happened: </span>
-                      <span className="text-base font-semibold text-gray-900">{formatDate(report.incidentDate)}</span>
+                      <span className="text-base font-semibold text-gray-900">{report.incidentDate ? formatDate(report.incidentDate) : 'Not specified'}</span>
                     </div>
                   </div>
                   
@@ -377,23 +408,30 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                 </div>
               </div>
 
-              {/* Evidence & Links */}
+              {/* Evidence Files */}
+              {report.evidenceFiles && report.evidenceFiles.length > 0 && (
+                <div className="bg-card rounded-xl p-6 border border-border shadow-sm">
+                  <EvidenceViewer evidenceFiles={report.evidenceFiles} />
+                </div>
+              )}
+
+              {/* Contact Channel */}
               {report.incidentChannel && (
-                <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                    <div className="p-1.5 bg-indigo-100 rounded-lg">
-                      <ExternalLink className="h-4 w-4 text-indigo-600" />
+                <div className="bg-card rounded-xl p-6 border border-border shadow-sm">
+                  <h3 className="font-semibold text-foreground mb-4 flex items-center space-x-2">
+                    <div className="p-1.5 bg-primary/10 rounded-lg">
+                      <ExternalLink className="h-4 w-4 text-primary" />
                     </div>
-                    <span>Evidence & Links</span>
+                    <span>Contact Channel</span>
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-green-100 rounded-lg">
                         <MessageSquare className="h-4 w-4 text-green-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Contact Channel</p>
-                        <p className="text-base font-semibold text-gray-900">{report.incidentChannel}</p>
+                        <p className="text-sm font-medium text-muted-foreground">Incident Channel</p>
+                        <p className="text-base font-semibold text-foreground">{report.incidentChannel}</p>
                       </div>
                     </div>
                   </div>
@@ -428,7 +466,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               <div className="bg-gray-50 rounded-lg p-2">
                 <div className="flex space-x-2">
                   <Avatar className="h-6 w-6 ring-1 ring-white shadow-sm">
-                    <AvatarImage src={user?.profileImage ? `http://localhost:3001${user.profileImage}` : undefined} />
+                    <AvatarImage src={user?.profileImage ? getImageUrl(user.profileImage) : undefined} />
                     <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-xs">
                       {user?.email?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
@@ -475,7 +513,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                       {/* Main Comment */}
                       <div className="flex space-x-2">
                         <Avatar className="h-6 w-6 ring-1 ring-white shadow-sm">
-                          <AvatarImage src={comment.userProfileImage ? `http://localhost:3001${comment.userProfileImage}` : undefined} />
+                          <AvatarImage src={comment.userProfileImage ? getImageUrl(comment.userProfileImage) : undefined} />
                           <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-xs">
                             {comment.userEmail?.[0]?.toUpperCase() || 'U'}
                           </AvatarFallback>
@@ -598,7 +636,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                           {comment.replies.slice(0, 2).map((reply) => (
                             <div key={reply.id} className="flex space-x-2">
                               <Avatar className="h-5 w-5 ring-1 ring-white shadow-sm">
-                                <AvatarImage src={reply.userProfileImage ? `http://localhost:3001${reply.userProfileImage}` : undefined} />
+                                <AvatarImage src={reply.userProfileImage ? getImageUrl(reply.userProfileImage) : undefined} />
                                 <AvatarFallback className="bg-green-100 text-green-600 font-semibold text-xs">
                                   {reply.userEmail?.[0]?.toUpperCase() || 'U'}
                                 </AvatarFallback>
@@ -788,7 +826,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               <Button
                 onClick={() => {
                   updateStatusMutation.mutate({
-                    id: report.id,
+                    id: report.id || '',
                     status: 'pending',
                     notes: `Status updated to pending by ${user?.name || user?.email || 'Unknown User'}`
                   })
@@ -804,7 +842,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               <Button
                 onClick={() => {
                   updateStatusMutation.mutate({
-                    id: report.id,
+                    id: report.id || '',
                     status: 'under_review',
                     notes: `Status updated to under review by ${user?.name || user?.email || 'Unknown User'}`
                   })
@@ -820,7 +858,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               <Button
                 onClick={() => {
                   updateStatusMutation.mutate({
-                    id: report.id,
+                    id: report.id || '',
                     status: 'verified',
                     notes: `Status updated to verified by ${user?.name || user?.email || 'Unknown User'}`
                   })
@@ -843,7 +881,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                       return
                     }
                     updateStatusMutation.mutate({
-                      id: report.id,
+                      id: report.id || '',
                       status: 'rejected',
                       notes: `Status updated to rejected by ${user?.name || user?.email || 'Unknown User'}. Reason: ${rejectionNotes}`
                     })
@@ -898,15 +936,15 @@ Contact: ${report.identifierValue}
 Method: ${report.identifierType}
 
 SCAM DETAILS:
-Money Lost: ${formatCurrency(report.amountLost, report.currency)}
-When it happened: ${formatDate(report.incidentDate)}
+Money Lost: ${formatCurrency(report.amountLost || 0, report.currency || 'NPR')}
+When it happened: ${report.incidentDate ? formatDate(report.incidentDate) : 'Not specified'}
 How they contacted: ${report.incidentChannel || 'Not specified'}
 
 NARRATIVE:
 ${report.narrative}
 
 Reported by: ${report.reporterEmail}
-Status: ${report.status.replace('_', ' ')}
+Status: ${report.status?.replace('_', ' ') || 'Unknown'}
 Risk Score: ${report.riskScore}
 
 ---

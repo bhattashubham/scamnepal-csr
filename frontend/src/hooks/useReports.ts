@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ReportService, ReportFilters } from '@/lib/api/services/reports'
-import { CreateReportForm, Report } from '@/types'
+import { CreateReportForm, Report, EvidenceFile } from '@/types'
 
 // Get all reports with filters
 export const useReports = (
@@ -19,7 +19,18 @@ export const useReports = (
 export const useReport = (id: string) => {
   return useQuery({
     queryKey: ['report', id],
-    queryFn: () => ReportService.getById(id),
+    queryFn: async () => {
+      const reportResponse = await ReportService.getById(id)
+      const evidenceResponse = await ReportService.getEvidence(id)
+      
+      return {
+        ...reportResponse,
+        data: {
+          ...reportResponse.data,
+          evidenceFiles: evidenceResponse.data || []
+        }
+      }
+    },
     enabled: !!id,
   })
 }
@@ -156,6 +167,7 @@ export const useReportHistory = (id: string) => {
     enabled: !!id,
   })
 }
+
 
 // Export reports
 export const useExportReports = () => {

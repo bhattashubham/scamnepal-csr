@@ -101,7 +101,7 @@ export default function SearchPage() {
       case 'identifier':
         return <MapPin className="h-5 w-5 text-blue-500" />
       default:
-        return <Search className="h-5 w-5 text-gray-500" />
+        return <Search className="h-5 w-5 text-muted-foreground" />
     }
   }
 
@@ -122,8 +122,8 @@ export default function SearchPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Search Registry</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-foreground mb-2">Search Registry</h1>
+        <p className="text-muted-foreground">
           Search across reports, entities, and identifiers to find scam information
         </p>
       </div>
@@ -136,7 +136,7 @@ export default function SearchPage() {
             <CardContent className="p-6">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
+                  <Search className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <Input
                   type="text"
@@ -160,16 +160,16 @@ export default function SearchPage() {
               {/* Autocomplete Suggestions */}
               {suggestions.length > 0 && query && (
                 <div className="mt-4 border border-gray-200 rounded-lg p-2 bg-white shadow-sm">
-                  <p className="text-xs text-gray-500 px-2 py-1">Suggestions:</p>
+                  <p className="text-xs text-muted-foreground px-2 py-1">Suggestions:</p>
                   <div className="space-y-1">
                     {suggestions.map((suggestion, index) => (
                       <button
                         key={index}
                         onClick={() => handleSearch(suggestion.text)}
-                        className="w-full text-left px-2 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded flex items-center justify-between"
+                        className="w-full text-left px-2 py-1 text-sm text-foreground hover:bg-gray-100 rounded flex items-center justify-between"
                       >
                         <span>{suggestion.text}</span>
-                        <span className="text-xs text-gray-500">{suggestion.count} results</span>
+                        <span className="text-xs text-muted-foreground">{suggestion.count} results</span>
                       </button>
                     ))}
                   </div>
@@ -206,7 +206,7 @@ export default function SearchPage() {
                 </div>
 
                 {searchResults.length > 0 && (
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     {totalResults.toLocaleString()} results found
                   </div>
                 )}
@@ -215,10 +215,10 @@ export default function SearchPage() {
               {/* Advanced Filters */}
               {showFilters && (
                 <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <h4 className="font-medium text-gray-900 mb-4">Advanced Filters</h4>
+                  <h4 className="font-medium text-foreground mb-4">Advanced Filters</h4>
                   <div className="grid md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         Content Type
                       </label>
                       <div className="space-y-2">
@@ -243,7 +243,7 @@ export default function SearchPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         Risk Score Range
                       </label>
                       <div className="space-y-2">
@@ -271,7 +271,7 @@ export default function SearchPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-2">
                         Date Range
                       </label>
                       <div className="space-y-2">
@@ -317,7 +317,7 @@ export default function SearchPage() {
             <Card>
               <CardContent className="p-8 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Searching...</p>
+                <p className="text-muted-foreground">Searching...</p>
               </CardContent>
             </Card>
           ) : searchResults.length > 0 ? (
@@ -345,20 +345,20 @@ export default function SearchPage() {
                                 Risk: {riskScore}
                               </div>
                             )}
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                               {formatRelativeTime(result.timestamp)}
                             </div>
                           </div>
 
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          <h3 className="text-lg font-medium text-foreground mb-2">
                             {result.title}
                           </h3>
                           
-                          <p className="text-gray-600 mb-3 line-clamp-2">
+                          <p className="text-muted-foreground mb-3 line-clamp-2">
                             {result.description}
                           </p>
 
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <span>Relevance: {Math.round(result.relevance * 100)}%</span>
                             {result.metadata?.category && (
                               <span>Category: {result.metadata.category}</span>
@@ -370,7 +370,7 @@ export default function SearchPage() {
                         </div>
 
                         <div className="flex items-center ml-4">
-                          <ExternalLink className="h-4 w-4 text-gray-400" />
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
                     </CardContent>
@@ -381,7 +381,7 @@ export default function SearchPage() {
               {/* Pagination */}
               {totalResults > 20 && (
                 <div className="flex items-center justify-between mt-6">
-                  <div className="text-sm text-gray-700">
+                  <div className="text-sm text-foreground">
                     Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, totalResults)} of {totalResults} results
                   </div>
                   
@@ -410,9 +410,9 @@ export default function SearchPage() {
           ) : query && !isLoading ? (
             <Card>
               <CardContent className="p-8 text-center">
-                <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-                <p className="text-gray-600">
+                <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No results found</h3>
+                <p className="text-muted-foreground">
                   Try adjusting your search terms or filters
                 </p>
               </CardContent>
@@ -440,10 +440,10 @@ export default function SearchPage() {
                         setQuery(saved.query)
                         setFilters(saved.filters)
                       }}
-                      className="w-full text-left p-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                      className="w-full text-left p-2 text-sm text-foreground hover:bg-gray-100 rounded"
                     >
                       <div className="font-medium truncate">{saved.name}</div>
-                      <div className="text-xs text-gray-500">{saved.query}</div>
+                      <div className="text-xs text-muted-foreground">{saved.query}</div>
                     </button>
                   ))}
                 </div>
@@ -472,7 +472,7 @@ export default function SearchPage() {
                   >
                     <div>
                       <p className="text-sm font-medium truncate">{item.value}</p>
-                      <p className="text-xs text-gray-500">{item.count} searches</p>
+                      <p className="text-xs text-muted-foreground">{item.count} searches</p>
                     </div>
                     <div className="text-xs text-blue-600 font-medium">
                       {item.type}
@@ -497,7 +497,7 @@ export default function SearchPage() {
                   <button
                     key={index}
                     onClick={() => handleSearch(search)}
-                    className="w-full text-left p-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                    className="w-full text-left p-2 text-sm text-foreground hover:bg-gray-100 rounded"
                   >
                     {search}
                   </button>

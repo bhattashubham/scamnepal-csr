@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useEntities, useEntityStats } from '@/hooks/useEntities'
 import { formatRiskScore, formatCurrency } from '@/lib/utils'
 import { Entity } from '@/types'
+import { getStatusColors } from '@/lib/theme-utils'
 import Link from 'next/link'
 
 export default function EntitiesPage() {
@@ -43,42 +44,33 @@ export default function EntitiesPage() {
   const stats = statsData?.data
 
   const getStatusIcon = (status: Entity['status']) => {
+    const colors = getStatusColors(status)
     switch (status) {
       case 'confirmed':
-        return <AlertTriangle className="h-4 w-4 text-red-600" />
+        return <AlertTriangle className={`h-4 w-4 ${colors.icon}`} />
       case 'alleged':
-        return <Shield className="h-4 w-4 text-yellow-600" />
+        return <Shield className={`h-4 w-4 ${colors.icon}`} />
       case 'disputed':
-        return <TrendingUp className="h-4 w-4 text-blue-600" />
+        return <TrendingUp className={`h-4 w-4 ${colors.icon}`} />
       case 'cleared':
-        return <Shield className="h-4 w-4 text-green-600" />
+        return <Shield className={`h-4 w-4 ${colors.icon}`} />
       default:
-        return <Shield className="h-4 w-4 text-gray-600" />
+        return <Shield className={`h-4 w-4 ${colors.icon}`} />
     }
   }
 
   const getStatusColor = (status: Entity['status']) => {
-    switch (status) {
-      case 'confirmed':
-        return 'text-red-700 bg-red-50 border-red-200'
-      case 'alleged':
-        return 'text-yellow-700 bg-yellow-50 border-yellow-200'
-      case 'disputed':
-        return 'text-blue-700 bg-blue-50 border-blue-200'
-      case 'cleared':
-        return 'text-green-700 bg-green-50 border-green-200'
-      default:
-        return 'text-gray-700 bg-gray-50 border-gray-200'
-    }
+    const colors = getStatusColors(status)
+    return `${colors.text} ${colors.bg} border-border`
   }
 
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center py-12">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to load entities</h3>
-          <p className="text-gray-600">{error instanceof Error ? error.message : String(error)}</p>
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Failed to load entities</h3>
+          <p className="text-muted-foreground">{error instanceof Error ? error.message : String(error)}</p>
         </div>
       </div>
     )
