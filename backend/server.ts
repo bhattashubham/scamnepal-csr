@@ -34,6 +34,17 @@ interface ExpressResponse {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Health check endpoint for Render
+app.get('/health', (req: ExpressRequest, res: ExpressResponse) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
+  });
+});
+
 // Initialize repositories
 const userRepository = new UserRepository();
 const reportRepository = new ReportRepository();
@@ -111,7 +122,15 @@ const profileUpload = multer({
 });
 
 // Middleware
-app.use(cors());
+// CORS configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || process.env.NODE_ENV === 'production' 
+    ? ['https://your-frontend-domain.vercel.app'] 
+    : ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -24,7 +24,10 @@
     "test:frontend": "cd frontend && npm test",
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd backend && npm run lint",
-    "lint:frontend": "cd frontend && npm run lint"
+    "lint:frontend": "cd frontend && npm run lint",
+    "deploy:prepare": "./deploy.sh",
+    "deploy:render": "echo 'Deploy backend to Render: https://render.com'",
+    "deploy:vercel": "echo 'Deploy frontend to Vercel: https://vercel.com'"
   },
   "keywords": [
     "scam",

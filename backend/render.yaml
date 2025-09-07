@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: scamnepal-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_HOST
+        value: localhost
+      - key: DB_PORT
+        value: 5432
+      - key: DB_NAME
+        value: scamnepal_csr
+      - key: DB_USER
+        value: postgres
+      - key: DB_PASSWORD
+        generateValue: true
+    healthCheckPath: /health
+    autoDeploy: true
+    branch: main

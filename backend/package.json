@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "nodemon --exec ts-node server.ts",
     "build": "tsc",
-    "start": "ts-node server.ts --skipLibCheck",
-    "clean": "rm -rf node_modules package-lock.json",
+    "start": "node dist/server.js",
+    "start:dev": "ts-node server.ts --skipLibCheck",
+    "clean": "rm -rf node_modules package-lock.json dist",
     "db:setup": "psql -U postgres -d scamnepal_csr -f database/schema.sql",
-    "db:reset": "psql -U postgres -c 'DROP DATABASE IF EXISTS scamnepal_csr; CREATE DATABASE scamnepal_csr;' && npm run db:setup"
+    "db:reset": "psql -U postgres -c 'DROP DATABASE IF EXISTS scamnepal_csr; CREATE DATABASE scamnepal_csr;' && npm run db:setup",
+    "postbuild": "cp -r uploads dist/ 2>/dev/null || true"
   },
   "keywords": [
     "api",
