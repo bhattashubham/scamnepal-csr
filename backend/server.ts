@@ -126,7 +126,7 @@ const profileUpload = multer({
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || process.env.NODE_ENV === 'production' 
     ? ['https://your-frontend-domain.vercel.app'] 
-    : ['http://localhost:3000', 'http://localhost:3001'],
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8081'],
   credentials: true,
   optionsSuccessStatus: 200
 };
