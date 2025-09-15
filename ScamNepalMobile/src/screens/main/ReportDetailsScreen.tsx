@@ -13,6 +13,7 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import { apiService } from '../../services/api';
 import { Report } from '../../types';
+import { getStatusColor, getRiskColor } from '../../utils/statusUtils';
 
 type ReportDetailsRouteProp = RouteProp<RootStackParamList, 'ReportDetails'>;
 
@@ -42,22 +43,6 @@ const ReportDetailsScreen = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return '#4caf50';
-      case 'pending': return '#ff9800';
-      case 'rejected': return '#f44336';
-      case 'under_review': return '#2196f3';
-      default: return '#666';
-    }
-  };
-
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore >= 80) return '#f44336';
-    if (riskScore >= 60) return '#ff9800';
-    if (riskScore >= 40) return '#ffeb3b';
-    return '#4caf50';
-  };
 
   if (isLoading) {
     return (
@@ -82,7 +67,7 @@ const ReportDetailsScreen = () => {
       <View style={styles.header}>
         <Text style={styles.title}>Report Details</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(report.status) }]}>
-          <Text style={styles.statusText}>{report.status.toUpperCase()}</Text>
+          <Text style={styles.statusText}>{getStatusText(report.status)}</Text>
         </View>
       </View>
 
@@ -203,14 +188,19 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 8,
+    maxWidth:60,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: 'bold',
+    textAlign: 'center',
+    numberOfLines: 1,
   },
   content: {
     padding: 16,

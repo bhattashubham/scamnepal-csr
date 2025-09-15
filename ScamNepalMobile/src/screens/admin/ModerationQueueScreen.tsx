@@ -11,6 +11,7 @@ import {
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 import { Report } from '../../types';
+import { getStatusColor, getRiskColor } from '../../utils/statusUtils';
 
 const ModerationQueueScreen = () => {
   const [reports, setReports] = useState<Report[]>([]);
@@ -60,29 +61,13 @@ const ModerationQueueScreen = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return '#4caf50';
-      case 'pending': return '#ff9800';
-      case 'rejected': return '#f44336';
-      case 'under_review': return '#2196f3';
-      default: return '#666';
-    }
-  };
-
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore >= 80) return '#f44336';
-    if (riskScore >= 60) return '#ff9800';
-    if (riskScore >= 40) return '#ffeb3b';
-    return '#4caf50';
-  };
 
   const renderReport = ({ item }: { item: Report }) => (
     <View style={styles.reportCard}>
       <View style={styles.reportHeader}>
         <Text style={styles.reportCategory}>{item.category}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
         </View>
       </View>
       
@@ -200,15 +185,19 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 8,
+    maxWidth: 50,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: 'bold',
-    textTransform: 'capitalize',
+    textAlign: 'center',
+    numberOfLines: 1,
   },
   reportValue: {
     fontSize: 14,

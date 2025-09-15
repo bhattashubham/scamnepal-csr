@@ -13,6 +13,7 @@ import { useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import { apiService } from '../../services/api';
 import { Entity } from '../../types';
+import { getStatusColor, getRiskColor } from '../../utils/statusUtils';
 
 type EntityDetailsRouteProp = RouteProp<RootStackParamList, 'EntityDetails'>;
 
@@ -42,22 +43,6 @@ const EntityDetailsScreen = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return '#f44336';
-      case 'alleged': return '#ff9800';
-      case 'disputed': return '#2196f3';
-      case 'cleared': return '#4caf50';
-      default: return '#666';
-    }
-  };
-
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore >= 80) return '#f44336';
-    if (riskScore >= 60) return '#ff9800';
-    if (riskScore >= 40) return '#ffeb3b';
-    return '#4caf50';
-  };
 
   if (isLoading) {
     return (
@@ -82,7 +67,7 @@ const EntityDetailsScreen = () => {
       <View style={styles.header}>
         <Text style={styles.title}>{entity.displayName}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(entity.status) }]}>
-          <Text style={styles.statusText}>{entity.status.toUpperCase()}</Text>
+          <Text style={styles.statusText}>{getStatusText(entity.status)}</Text>
         </View>
       </View>
 
@@ -208,14 +193,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 8,
+    maxWidth: 50,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: 'bold',
+    textAlign: 'center',
+    numberOfLines: 1,
   },
   content: {
     padding: 16,

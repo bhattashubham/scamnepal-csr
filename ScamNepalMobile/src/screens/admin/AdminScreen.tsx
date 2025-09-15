@@ -13,13 +13,14 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
 import { apiService } from '../../services/api';
-import { authService } from '../../services/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { User } from '../../types';
 
 type AdminScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const AdminScreen = () => {
   const navigation = useNavigation<AdminScreenNavigationProp>();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalReports: 0,
@@ -29,8 +30,7 @@ const AdminScreen = () => {
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const user = authService.getState().user;
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'admin' || user?.role === 'moderator') {
@@ -96,6 +96,41 @@ const AdminScreen = () => {
     setRefreshing(false);
   };
 
+  const handleRecalculateRiskScores = async () => {
+    Alert.alert(
+      'Recalculate Risk Scores',
+      'This will recalculate risk scores for all reports based on current data. This may take a few moments.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Recalculate',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsRecalculating(true);
+              const response = await apiService.recalculateRiskScores();
+              
+              if (response.success) {
+                Alert.alert(
+                  'Success',
+                  `Risk scores recalculated for ${response.data.updatedCount} reports`,
+                  [{ text: 'OK', onPress: () => loadData() }]
+                );
+              } else {
+                Alert.alert('Error', response.error || 'Failed to recalculate risk scores');
+              }
+            } catch (error) {
+              console.error('Risk recalculation error:', error);
+              Alert.alert('Error', 'Failed to recalculate risk scores. Please try again.');
+            } finally {
+              setIsRecalculating(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const navigateToAddUser = () => {
     navigation.navigate('AddUser');
   };
@@ -159,6 +194,16 @@ const AdminScreen = () => {
           <TouchableOpacity style={styles.actionButton} onPress={navigateToModerationQueue}>
             <Icon name="queue" size={24} color="#2196F3" />
             <Text style={styles.actionText}>Moderation</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.actionButton, isRecalculating && styles.disabledButton]} 
+            onPress={handleRecalculateRiskScores}
+            disabled={isRecalculating}
+          >
+            <Icon name="calculate" size={24} color={isRecalculating ? "#ccc" : "#2196F3"} />
+            <Text style={[styles.actionText, isRecalculating && styles.disabledText]}>
+              {isRecalculating ? 'Calculating...' : 'Recalc Risk'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -307,6 +352,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#333',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#ccc',
   },
   statsGrid: {
     flexDirection: 'row',

@@ -208,6 +208,12 @@ class ApiService {
     return response.data;
   }
 
+  // Risk Management
+  async recalculateRiskScores(): Promise<ApiResponse<{ message: string; updatedCount: number }>> {
+    const response: AxiosResponse<ApiResponse<{ message: string; updatedCount: number }>> = await this.api.post('/reports/recalculate-risk');
+    return response.data;
+  }
+
   // Health Check
   async healthCheck(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
     const response: AxiosResponse<ApiResponse<{ status: string; timestamp: string }>> = await this.api.get('/health');

@@ -11,11 +11,12 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
-import { authService } from '../../services/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import { User } from '../../types';
 
@@ -23,7 +24,7 @@ type EditProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const EditProfileScreen = () => {
   const navigation = useNavigation<EditProfileScreenNavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,16 +34,14 @@ const EditProfileScreen = () => {
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
-    const currentUser = authService.getState().user;
-    if (currentUser) {
-      setUser(currentUser);
+    if (user) {
       setFormData({
-        name: currentUser.name,
-        email: currentUser.email,
-        phone: currentUser.phone || '',
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
       });
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -76,7 +75,7 @@ const EditProfileScreen = () => {
       
       if (response.success) {
         const updatedUser = { ...user!, ...formData };
-        authService.updateUser(updatedUser);
+        updateUser(updatedUser);
         Alert.alert(
           'Success',
           'Profile updated successfully',
@@ -125,11 +124,12 @@ const EditProfileScreen = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
             <Text style={styles.cancelText}>Cancel</Text>
@@ -269,8 +269,9 @@ const EditProfileScreen = () => {
             </View>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -296,6 +297,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,

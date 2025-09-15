@@ -14,6 +14,76 @@ const { ReportRepository } = require('./repositories/ReportRepository');
 // Import forex service
 const forexService = require('./services/forexService');
 
+// Risk calculation function
+function calculateRiskScore(report) {
+  let riskScore = 0;
+  
+  // Base risk factors
+  const riskFactors = {
+    // Category-based risk (0-30 points)
+    category: {
+      'phishing': 25,
+      'investment': 30,
+      'romance': 20,
+      'tech_support': 15,
+      'other': 10
+    },
+    
+    // Amount-based risk (0-25 points)
+    amount: (amount) => {
+      if (amount >= 10000) return 25;
+      if (amount >= 5000) return 20;
+      if (amount >= 1000) return 15;
+      if (amount >= 100) return 10;
+      return 5;
+    },
+    
+    // Status-based risk (0-20 points)
+    status: {
+      'verified': 20,
+      'under_review': 15,
+      'pending': 10,
+      'rejected': 0
+    },
+    
+    // Evidence-based risk (0-15 points)
+    evidence: (evidenceCount) => {
+      if (evidenceCount >= 5) return 15;
+      if (evidenceCount >= 3) return 10;
+      if (evidenceCount >= 1) return 5;
+      return 0;
+    },
+    
+    // Recency-based risk (0-10 points)
+    recency: (daysSinceCreated) => {
+      if (daysSinceCreated <= 1) return 10;
+      if (daysSinceCreated <= 7) return 7;
+      if (daysSinceCreated <= 30) return 5;
+      return 2;
+    }
+  };
+  
+  // Calculate category risk
+  riskScore += riskFactors.category[report.category] || 10;
+  
+  // Calculate amount risk
+  riskScore += riskFactors.amount(report.amount_lost || 0);
+  
+  // Calculate status risk
+  riskScore += riskFactors.status[report.status] || 5;
+  
+  // Calculate evidence risk (assuming evidence count is passed)
+  const evidenceCount = report.evidence_count || 0;
+  riskScore += riskFactors.evidence(evidenceCount);
+  
+  // Calculate recency risk
+  const daysSinceCreated = Math.floor((Date.now() - new Date(report.created_at).getTime()) / (1000 * 60 * 60 * 24));
+  riskScore += riskFactors.recency(daysSinceCreated);
+  
+  // Ensure risk score is between 0 and 100
+  return Math.min(Math.max(riskScore, 0), 100);
+}
+
 // Interfaces
 interface ExpressRequest {
   body: any;
@@ -227,10 +297,6 @@ const transformReportForFrontend = (report: any) => ({
 
 // Routes
 
-// Health check
-app.get('/health', (req: ExpressRequest, res: ExpressResponse) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Auth routes
 app.post('/api/auth/register', async (req: ExpressRequest, res: ExpressResponse) => {
@@ -495,10 +561,56 @@ app.patch('/api/auth/users/:id/role', authMiddleware, adminMiddleware, async (re
   }
 });
 
+// Risk calculation endpoint
+app.post('/api/reports/recalculate-risk', authMiddleware, async (req: ExpressRequest, res: ExpressResponse) => {
+  try {
+    // Only allow moderators and admins to recalculate risk scores
+    if (!['moderator', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Insufficient permissions'
+      });
+    }
+
+    // Get all reports
+    const reports = await reportRepository.getAllReports();
+    
+    // Recalculate risk scores for all reports
+    const updatedReports = [];
+    for (const report of reports) {
+      const newRiskScore = calculateRiskScore({
+        ...report,
+        evidence_count: report.evidence_count || 0
+      });
+      
+      // Update the report with new risk score
+      const updatedReport = await reportRepository.updateReport(report.id, {
+        risk_score: newRiskScore
+      });
+      
+      updatedReports.push(updatedReport);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        message: `Recalculated risk scores for ${updatedReports.length} reports`,
+        updatedCount: updatedReports.length
+      }
+    });
+  } catch (error) {
+    console.error('Risk recalculation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to recalculate risk scores'
+    });
+  }
+});
+
 // Report routes
 app.post('/api/reports', authMiddleware, async (req: ExpressRequest, res: ExpressResponse) => {
   try {
-  const reportData = {
+  const reportData: any = {
       identifier_type: req.body.identifierType?.substring(0, 100) || 'website',
     identifier_value: req.body.identifierValue,
       category: req.body.scamCategory?.substring(0, 100) || 'other',
@@ -511,6 +623,15 @@ app.post('/api/reports', authMiddleware, async (req: ExpressRequest, res: Expres
     reporter_email: req.user.email || 'unknown@example.com',
       status: 'pending'
   };
+
+    // Calculate dynamic risk score
+    const riskScore = calculateRiskScore({
+      ...reportData,
+      created_at: new Date().toISOString(),
+      evidence_count: 0
+    });
+    
+    reportData.risk_score = riskScore;
 
     const createdReport = await reportRepository.createReport(reportData);
     
@@ -2561,6 +2682,60 @@ app.get('/api/entities', authMiddleware, async (req: ExpressRequest, res: Expres
     res.status(500).json({
       success: false,
       error: 'Failed to fetch entities'
+    });
+  }
+});
+
+app.get('/api/entities/:id', authMiddleware, async (req: ExpressRequest, res: ExpressResponse) => {
+  try {
+    const entityId = req.params.id;
+    
+    // Extract report ID from entity ID (entity_<reportId>)
+    const reportId = entityId.replace('entity_', '');
+    
+    const report = await reportRepository.findById(reportId);
+    
+    if (!report) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Entity not found' 
+      });
+    }
+
+    // Get additional statistics for this entity
+    const reportCount = await reportRepository.countReportsByStatus('verified', reportId);
+    const totalAmountLost = await reportRepository.sumAmountLostByReportId(reportId);
+    
+    const entity = {
+      id: `entity_${report.id}`,
+      displayName: report.identifier_value,
+      riskScore: report.risk_score || 0,
+      status: report.status === 'verified' ? 'confirmed' : 
+              report.status === 'rejected' ? 'cleared' : 
+              report.status === 'under_review' ? 'disputed' : 'alleged',
+      reportCount,
+      totalAmountLost: totalAmountLost || 0,
+      lastReported: report.created_at,
+      identifierType: report.identifier_type,
+      category: report.category,
+      narrative: report.narrative,
+      amountLost: report.amount_lost,
+      currency: report.currency,
+      incidentDate: report.incident_date,
+      incidentChannel: report.incident_channel,
+      createdAt: report.created_at,
+      updatedAt: report.updated_at
+    };
+
+    res.json({
+      success: true,
+      data: entity
+    });
+  } catch (error) {
+    console.error('Error fetching entity details:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch entity details'
     });
   }
 });

@@ -14,8 +14,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
 import { apiService } from '../../services/api';
-import { authService } from '../../services/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { Report, Entity } from '../../types';
+import { getStatusColor, getStatusText, getRiskColor } from '../../utils/statusUtils';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -26,7 +27,7 @@ const HomeScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const user = authService.getState().user;
+  const { user } = useAuth();
 
   useEffect(() => {
     loadData();
@@ -98,22 +99,6 @@ const HomeScreen = () => {
     navigation.navigate('EntityDetails', { entityId });
   };
 
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore >= 80) return '#f44336';
-    if (riskScore >= 60) return '#ff9800';
-    if (riskScore >= 40) return '#ffeb3b';
-    return '#4caf50';
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return '#4caf50';
-      case 'pending': return '#ff9800';
-      case 'rejected': return '#f44336';
-      case 'under_review': return '#2196f3';
-      default: return '#666';
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -164,7 +149,7 @@ const HomeScreen = () => {
               <View style={styles.reportHeader}>
                 <Text style={styles.reportTitle}>{report.category}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(report.status) }]}>
-                  <Text style={styles.statusText}>{report.status}</Text>
+                  <Text style={styles.statusText}>{getStatusText(report.status)}</Text>
                 </View>
               </View>
               <Text style={styles.reportValue}>{report.identifierValue}</Text>
@@ -211,7 +196,7 @@ const HomeScreen = () => {
                 </Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(entity.status) }]}>
-                <Text style={styles.statusText}>{entity.status}</Text>
+                <Text style={styles.statusText}>{getStatusText(entity.status)}</Text>
               </View>
             </TouchableOpacity>
           ))
@@ -303,15 +288,19 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 8,
+    maxWidth: 50,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: 'bold',
-    textTransform: 'capitalize',
+    textAlign: 'center',
+    numberOfLines: 1,
   },
   reportValue: {
     fontSize: 14,

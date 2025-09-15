@@ -33,10 +33,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         AsyncStorage.getItem('auth_token')
       ]);
       
+      console.log('Loading stored user:', { storedUser, storedToken });
+      
       if (storedUser && storedToken) {
-        setUser(JSON.parse(storedUser));
+        const userData = JSON.parse(storedUser);
+        console.log('Parsed user data:', userData);
+        setUser(userData);
         // Set the token in the API service
         apiService.setAuthToken(storedToken);
+      } else {
+        console.log('No stored user data found');
       }
     } catch (error) {
       console.error('Error loading stored user:', error);

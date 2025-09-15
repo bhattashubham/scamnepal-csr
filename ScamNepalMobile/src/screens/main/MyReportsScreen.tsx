@@ -13,8 +13,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
 import { apiService } from '../../services/api';
-import { authService } from '../../services/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { Report } from '../../types';
+import { getStatusColor, getRiskColor } from '../../utils/statusUtils';
 
 type MyReportsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -26,7 +27,7 @@ const MyReportsScreen = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const user = authService.getState().user;
+  const { user } = useAuth();
 
   useEffect(() => {
     loadMyReports();
@@ -108,22 +109,6 @@ const MyReportsScreen = () => {
     );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return '#4caf50';
-      case 'pending': return '#ff9800';
-      case 'rejected': return '#f44336';
-      case 'under_review': return '#2196f3';
-      default: return '#666';
-    }
-  };
-
-  const getRiskColor = (riskScore: number) => {
-    if (riskScore >= 80) return '#f44336';
-    if (riskScore >= 60) return '#ff9800';
-    if (riskScore >= 40) return '#ffeb3b';
-    return '#4caf50';
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -148,7 +133,7 @@ const MyReportsScreen = () => {
         <View style={styles.reportActions}>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
             <Icon name={getStatusIcon(item.status)} size={16} color="#fff" />
-            <Text style={styles.statusText}>{item.status}</Text>
+            <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
           </View>
           <TouchableOpacity
             style={styles.deleteButton}
@@ -338,14 +323,15 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 8,
     marginRight: 8,
+    maxWidth: 50,
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: 'bold',
     marginLeft: 4,
     textTransform: 'capitalize',

@@ -8,27 +8,23 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
-import { authService } from '../../services/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { User } from '../../types';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, logout, isLoading } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = authService.subscribe((state) => {
-      setUser(state.user);
-    });
-    return unsubscribe;
-  }, []);
+  console.log('ProfileScreen - user:', user, 'isLoading:', isLoading);
 
   const handleLogout = () => {
     Alert.alert(
@@ -36,7 +32,7 @@ const ProfileScreen = () => {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: authService.logout },
+        { text: 'Logout', style: 'destructive', onPress: logout },
       ]
     );
   };
@@ -64,17 +60,34 @@ const ProfileScreen = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Icon name="refresh" size={64} color="#2196F3" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!user) {
     return (
-      <View style={styles.errorContainer}>
-        <Icon name="person-off" size={64} color="#f44336" />
-        <Text style={styles.errorText}>User not found</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Icon name="person-off" size={64} color="#f44336" />
+          <Text style={styles.errorText}>User not found</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           <Icon name="person" size={64} color="#2196F3" />
@@ -191,11 +204,13 @@ const ProfileScreen = () => {
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const getRoleColor = (role: string) => {
+// Helper function for role colors
+const getRoleColor = (role: string): string => {
   switch (role) {
     case 'admin': return '#f44336';
     case 'moderator': return '#ff9800';
@@ -217,6 +232,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
     backgroundColor: '#2196F3',
@@ -367,6 +385,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#2196F3',
+    marginTop: 16,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -377,6 +406,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#f44336',
     marginTop: 16,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

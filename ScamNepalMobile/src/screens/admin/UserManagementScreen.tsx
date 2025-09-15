@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
 import { apiService } from '../../services/api';
-import { authService } from '../../services/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { User } from '../../types';
 
 type UserManagementScreenNavigationProp = StackNavigationProp<RootStackParamList>;
@@ -29,7 +29,7 @@ const UserManagementScreen = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const currentUser = authService.getState().user;
+  const { user: currentUser } = useAuth();
 
   const roles = [
     { label: 'All', value: 'all' },
